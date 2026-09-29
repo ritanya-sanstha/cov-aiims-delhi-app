@@ -1,24 +1,65 @@
-diff --git a/node_modules/@react-native/gradle-plugin/settings-plugin/src/main/kotlin/com/facebook/react/ReactSettingsExtension.kt b/node_modules/@react-native/gradle-plugin/settings-plugin/src/main/kotlin/com/facebook/react/ReactSettingsExtension.kt
-index abc1234..def5678 100644
 --- a/node_modules/@react-native/gradle-plugin/settings-plugin/src/main/kotlin/com/facebook/react/ReactSettingsExtension.kt
 +++ b/node_modules/@react-native/gradle-plugin/settings-plugin/src/main/kotlin/com/facebook/react/ReactSettingsExtension.kt
 @@ -44,7 +44,6 @@
     * @param lockFiles The list of lock files to check for changes (if lockfiles are not changed, the
+
     *   command will not be executed).
+
     */
+
 -  @JvmOverloads
+
    public fun autolinkLibrariesFromCommand(
+
        command: List<String> = defaultConfigCommand,
+
        workingDirectory: File? = settings.layout.rootDirectory.dir("../").asFile,
-diff --git a/node_modules/@react-native/gradle-plugin/settings-plugin/build.gradle.kts b/node_modules/@react-native/gradle-plugin/settings-plugin/build.gradle.kts
-index abc2345..def6789 100644
+
+@@ -74,6 +73,15 @@
+ 
+
+     linkLibraries(getLibrariesToAutolink(outputFile))
+
+   }
+
++
+
++  public fun autolinkLibrariesFromCommand(command: List<String>): Unit =
+
++      autolinkLibrariesFromCommand(
+
++          command = command,
+
++          workingDirectory = settings.layout.rootDirectory.dir("../").asFile,
+
++          lockFiles = settings.layout.rootDirectory
+
++              .dir("../")
+
++              .files("yarn.lock", "package-lock.json", "package.json", "react-native.config.js")
+
++      )
+
+ 
+
+   /**
+
+    * Utility function to autolink libraries using an external file as source of truth.
+
 --- a/node_modules/@react-native/gradle-plugin/settings-plugin/build.gradle.kts
 +++ b/node_modules/@react-native/gradle-plugin/settings-plugin/build.gradle.kts
 @@ -58,6 +58,7 @@
      jvmTarget.set(JvmTarget.JVM_11)
+
      allWarningsAsErrors =
+
          project.properties["enableWarningsAsErrors"]?.toString()?.toBoolean() ?: false
-+        freeCompilerArgs.add("-Xskip-metadata-version-check")
+
++    freeCompilerArgs.add("-Xskip-metadata-version-check")
+
    }
+
  }
+
  
+
