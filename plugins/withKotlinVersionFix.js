@@ -6,7 +6,7 @@ function withKotlinVersionFix(config) {
     if (!contents.includes('ext.kotlinVersion') && !contents.includes('kotlinVersion =')) {
       config.modResults.contents = contents.replace(
         'buildscript {',
-        'buildscript {\n    ext {\n        kotlinVersion = "2.1.0"\n    }\n'
+        'buildscript {\n    ext {\n        kotlinVersion = "2.2.0"\n    }\n'
       );
     }
     return config;

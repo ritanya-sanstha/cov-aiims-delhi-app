@@ -51,7 +51,7 @@ module.exports = {
         {
           android: {
             usesCleartextTraffic: false,
-            kotlinVersion: '2.1.0',
+            kotlinVersion: '2.2.0',
           },
         },
       ],
