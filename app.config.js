@@ -61,7 +61,7 @@ module.exports = {
     extra: {
       register,            // entire Register Artifact available at runtime
       eas: {
-        projectId: 'cov-aiims-delhi-app',
+        projectId: '579a2255-f69f-4095-9250-f55cfdefa376',
       },
     },
   },
