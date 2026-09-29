@@ -1,39 +1,76 @@
+/**
+ * app/_layout.tsx  — Root layout (Expo Router)
+ *
+ * Auth detection strategy (WebView-centric):
+ *   1. On mount, do a lightweight HEAD request to baseUrl/dashboard
+ *   2. If response URL ended up at /login  → user is not logged in → show (auth) stack
+ *   3. If response URL stayed at /dashboard → user is logged in  → show (tabs) stack
+ *
+ * After login, the website sets an HttpOnly session cookie in the system WebView
+ * cookie jar.  All subsequent WebViews in the app share that cookie automatically.
+ */
 import { useEffect, useState } from 'react';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { SessionCtx, SessionContext } from '../lib/useSession';
-import { getMe, SessionUser } from '../lib/auth';
+import { View, ActivityIndicator } from 'react-native';
+import { REGISTER, siteUrl } from '../src/config';
+
+type AuthState = 'loading' | 'loggedIn' | 'loggedOut';
 
 export default function RootLayout() {
-  const [user, setUser] = useState<SessionUser | null>(null);
-  const [loading, setLoading] = useState(true);
-
+  const [authState, setAuthState] = useState<AuthState>('loading');
   const router = useRouter();
   const segments = useSegments();
 
   useEffect(() => {
-    getMe().then((u) => {
-      setUser(u);
-      setLoading(false);
-    });
+    checkAuthState();
   }, []);
 
   useEffect(() => {
-    if (loading) return;
+    if (authState === 'loading') return;
+
     const inAuth = segments[0] === '(auth)';
-    if (!user && !inAuth) {
+    if (authState === 'loggedOut' && !inAuth) {
       router.replace('/(auth)/login');
-    } else if (user && inAuth) {
+    } else if (authState === 'loggedIn' && inAuth) {
       router.replace('/(tabs)/home');
     }
-  }, [user, loading, segments]);
+  }, [authState, segments]);
 
-  const ctx: SessionContext = { user, loading, setUser };
+  async function checkAuthState() {
+    try {
+      // Ping the dashboard — the server will redirect to /login if not authed
+      const res = await fetch(siteUrl('/dashboard'), {
+        method: 'GET',
+        redirect: 'follow',
+        credentials: 'include',
+        headers: { 'Accept': 'text/html' },
+      });
+      const finalUrl = res.url ?? '';
+      const isLogin = finalUrl.includes(REGISTER.website.loginPath);
+      setAuthState(isLogin ? 'loggedOut' : 'loggedIn');
+    } catch {
+      // Network error → let the login WebView handle it
+      setAuthState('loggedOut');
+    }
+  }
+
+  if (authState === 'loading') {
+    return (
+      <View style={{ flex: 1, backgroundColor: REGISTER.branding.splashBg, justifyContent: 'center', alignItems: 'center' }}>
+        <StatusBar style={REGISTER.branding.statusBarStyle} />
+        <ActivityIndicator size="large" color={REGISTER.branding.accentColor} />
+      </View>
+    );
+  }
 
   return (
-    <SessionCtx.Provider value={ctx}>
-      <StatusBar style="auto" />
-      <Stack screenOptions={{ headerShown: false }} />
-    </SessionCtx.Provider>
+    <>
+      <StatusBar style={REGISTER.branding.statusBarStyle} />
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="(auth)" />
+        <Stack.Screen name="(tabs)" />
+      </Stack>
+    </>
   );
 }

@@ -1,0 +1,103 @@
+/**
+ * src/config/index.ts
+ * Runtime access to the Register Artifact.
+ * All components read from REGISTER — never hardcode colors, URLs, or names.
+ */
+import Constants from 'expo-constants';
+
+export interface TabConfig {
+  id: string;
+  label: string;
+  icon: string;
+  path: string;
+}
+
+export interface InstituteRegister {
+  institute: {
+    name: string;
+    shortName: string;
+    code: string;
+    tagline: string;
+    description: string;
+  };
+  app: {
+    appName: string;
+    bundleId: string;
+    androidPackage: string;
+    versionCode: number;
+    easProfileName: string;
+  };
+  website: {
+    baseUrl: string;
+    loginPath: string;
+    homePath: string;
+    allowedDomains: string[];
+  };
+  branding: {
+    logoFile: string;
+    primaryColor: string;
+    accentColor: string;
+    statusBarStyle: 'light' | 'dark';
+    splashBg: string;
+    helplineColor: string;
+  };
+  navigation: {
+    tabs: TabConfig[];
+  };
+  standard: {
+    ritanyaTreeLogo: boolean;
+    tagline1: string;
+    tagline2: string;
+    memberIdPrefix: string;
+    memberIdInstCode: string;
+    poweredBy: string;
+  };
+}
+
+export const REGISTER: InstituteRegister =
+  (Constants.expoConfig?.extra?.register as InstituteRegister) ?? {
+    // Fallback for bare metro / local dev without REGISTER_FILE set
+    institute: { name: 'COV – AIIMS Delhi', shortName: 'AIIMS Delhi', code: 'AD', tagline: 'Alumni Network', description: '' },
+    app: { appName: 'AIIMS Delhi Alumni', bundleId: 'in.ritanyasanstha.aiimsdelhi', androidPackage: 'in.ritanyasanstha.aiimsdelhi', versionCode: 1, easProfileName: 'aiims-delhi' },
+    website: { baseUrl: 'https://aiimsdelhi.ritanyasanstha.in', loginPath: '/login', homePath: '/dashboard', allowedDomains: ['aiimsdelhi.ritanyasanstha.in', 'ritanyasanstha.in'] },
+    branding: { logoFile: 'aiims-delhi-logo.png', primaryColor: '#1B2B5E', accentColor: '#C9A84C', statusBarStyle: 'light', splashBg: '#1B2B5E', helplineColor: '#EF4444' },
+    navigation: {
+      tabs: [
+        { id: 'home', label: 'Home', icon: 'home', path: '/dashboard' },
+        { id: 'helpline', label: 'Helpline', icon: 'heart', path: '/helpline' },
+        { id: 'directory', label: 'Directory', icon: 'people', path: '/directory' },
+        { id: 'jobs', label: 'Jobs', icon: 'briefcase', path: '/jobs' },
+        { id: 'more', label: 'More', icon: 'grid', path: '/more' },
+      ],
+    },
+    standard: { ritanyaTreeLogo: true, tagline1: 'One Family — Every Stage of Life', tagline2: 'Help Others Celebrate Life', memberIdPrefix: 'AB', memberIdInstCode: 'AD', poweredBy: 'Ritanya Sanstha' },
+  };
+
+/** Full URL for a website path */
+export function siteUrl(path: string): string {
+  const base = REGISTER.website.baseUrl.replace(/\/$/, '');
+  return `${base}${path.startsWith('/') ? path : '/' + path}`;
+}
+
+/** True if the given URL is within our allowed domain whitelist */
+export function isAllowedUrl(url: string): boolean {
+  try {
+    const { hostname } = new URL(url);
+    return REGISTER.website.allowedDomains.some(
+      (d) => hostname === d || hostname.endsWith(`.${d}`)
+    );
+  } catch {
+    return false;
+  }
+}
+
+/** True if this URL represents a logged-in page (not the login page) */
+export function isLoggedInUrl(url: string): boolean {
+  const loginPath = REGISTER.website.loginPath; // '/login'
+  try {
+    const { pathname } = new URL(url);
+    return !pathname.startsWith(loginPath);
+  } catch {
+    return false;
+  }
+}

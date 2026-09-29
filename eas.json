@@ -1,0 +1,28 @@
+{
+  "cli": {
+    "version": ">= 16.0.0",
+    "appVersionSource": "local"
+  },
+  "build": {
+    "base": {
+      "distribution": "store",
+      "android": {
+        "buildType": "apk"
+      }
+    },
+    "aiims-delhi": {
+      "extends": "base",
+      "env": {
+        "REGISTER_FILE": "./registers/aiims-delhi.register.json"
+      }
+    }
+  },
+  "submit": {
+    "aiims-delhi": {
+      "android": {
+        "serviceAccountKeyPath": "./credentials/google-play-service-account.json",
+        "track": "internal"
+      }
+    }
+  }
+}

@@ -1,62 +1,76 @@
+/**
+ * app/(tabs)/_layout.tsx — Bottom tab navigator
+ *
+ * All config (colors, tab labels, icons) comes from the Register Artifact.
+ * Never hardcode anything here — if it should change per institute, it's in REGISTER.
+ *
+ * Tab icons: Ionicons (bundled with @expo/vector-icons)
+ * Tab mapping:
+ *   home      → /dashboard
+ *   helpline  → /helpline
+ *   directory → /directory
+ *   jobs      → /jobs
+ *   more      → /more
+ */
 import { Tabs } from 'expo-router';
-import { Text } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { REGISTER } from '../../src/config';
 
-function Icon({ emoji, focused }: { emoji: string; focused: boolean }) {
-  return <Text style={{ fontSize: focused ? 22 : 20, opacity: focused ? 1 : 0.6 }}>{emoji}</Text>;
-}
+type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
+
+// Map our Register Artifact icon keys to Ionicons names
+const ICON_MAP: Record<string, { outline: IoniconName; filled: IoniconName }> = {
+  home:      { outline: 'home-outline',      filled: 'home'       },
+  heart:     { outline: 'heart-outline',     filled: 'heart'      },
+  people:    { outline: 'people-outline',    filled: 'people'     },
+  briefcase: { outline: 'briefcase-outline', filled: 'briefcase'  },
+  grid:      { outline: 'grid-outline',      filled: 'grid'       },
+  more:      { outline: 'ellipsis-horizontal-outline', filled: 'ellipsis-horizontal' },
+};
+
+const primary  = REGISTER.branding.primaryColor;  // '#1B2B5E'
+const inactive = '#9CA3AF';
 
 export default function TabsLayout() {
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: '#1a56db',
-        tabBarInactiveTintColor: '#9ca3af',
+        tabBarActiveTintColor: primary,
+        tabBarInactiveTintColor: inactive,
         tabBarStyle: {
           borderTopWidth: 1,
-          borderTopColor: '#e5e7eb',
-          paddingBottom: 4,
+          borderTopColor: '#E5E7EB',
+          paddingBottom: 6,
           paddingTop: 4,
           height: 60,
+          backgroundColor: '#FFFFFF',
         },
-        tabBarLabelStyle: { fontSize: 11, fontWeight: '500' },
+        tabBarLabelStyle: {
+          fontSize: 11,
+          fontWeight: '500',
+        },
       }}
     >
-      <Tabs.Screen
-        name="home"
-        options={{
-          title: 'Home',
-          tabBarIcon: ({ focused }) => <Icon emoji="🏠" focused={focused} />,
-        }}
-      />
-      <Tabs.Screen
-        name="directory"
-        options={{
-          title: 'Members',
-          tabBarIcon: ({ focused }) => <Icon emoji="👥" focused={focused} />,
-        }}
-      />
-      <Tabs.Screen
-        name="idcard"
-        options={{
-          title: 'My ID',
-          tabBarIcon: ({ focused }) => <Icon emoji="🪪" focused={focused} />,
-        }}
-      />
-      <Tabs.Screen
-        name="community"
-        options={{
-          title: 'Community',
-          tabBarIcon: ({ focused }) => <Icon emoji="💬" focused={focused} />,
-        }}
-      />
-      <Tabs.Screen
-        name="profile"
-        options={{
-          title: 'Profile',
-          tabBarIcon: ({ focused }) => <Icon emoji="👤" focused={focused} />,
-        }}
-      />
+      {REGISTER.navigation.tabs.map((tab) => {
+        const icons = ICON_MAP[tab.icon] ?? { outline: 'ellipsis-horizontal-outline', filled: 'ellipsis-horizontal' };
+        return (
+          <Tabs.Screen
+            key={tab.id}
+            name={tab.id}
+            options={{
+              title: tab.label,
+              tabBarIcon: ({ focused, color, size }) => (
+                <Ionicons
+                  name={focused ? icons.filled : icons.outline}
+                  size={size}
+                  color={color}
+                />
+              ),
+            }}
+          />
+        );
+      })}
     </Tabs>
   );
 }

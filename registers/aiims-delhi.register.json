@@ -1,0 +1,55 @@
+{
+  "institute": {
+    "name": "COV – AIIMS Delhi",
+    "shortName": "AIIMS Delhi",
+    "code": "AD",
+    "tagline": "Alumni Network",
+    "description": "Community of Volunteers for AIIMS Delhi"
+  },
+
+  "app": {
+    "appName": "AIIMS Delhi Alumni",
+    "bundleId": "in.ritanyasanstha.aiimsdelhi",
+    "androidPackage": "in.ritanyasanstha.aiimsdelhi",
+    "versionCode": 1,
+    "easProfileName": "aiims-delhi"
+  },
+
+  "website": {
+    "baseUrl": "https://aiimsdelhi.ritanyasanstha.in",
+    "loginPath": "/login",
+    "homePath": "/dashboard",
+    "allowedDomains": [
+      "aiimsdelhi.ritanyasanstha.in",
+      "ritanyasanstha.in"
+    ]
+  },
+
+  "branding": {
+    "logoFile": "aiims-delhi-logo.png",
+    "primaryColor": "#1B2B5E",
+    "accentColor": "#C9A84C",
+    "statusBarStyle": "light",
+    "splashBg": "#1B2B5E",
+    "helplineColor": "#EF4444"
+  },
+
+  "navigation": {
+    "tabs": [
+      { "id": "home",      "label": "Home",      "icon": "home",      "path": "/dashboard" },
+      { "id": "helpline",  "label": "Helpline",  "icon": "heart",     "path": "/helpline"  },
+      { "id": "directory", "label": "Directory", "icon": "people",    "path": "/directory" },
+      { "id": "jobs",      "label": "Jobs",      "icon": "briefcase", "path": "/jobs"      },
+      { "id": "more",      "label": "More",      "icon": "grid",      "path": "/more"      }
+    ]
+  },
+
+  "standard": {
+    "ritanyaTreeLogo": true,
+    "tagline1": "One Family — Every Stage of Life",
+    "tagline2": "Help Others Celebrate Life",
+    "memberIdPrefix": "AB",
+    "memberIdInstCode": "AD",
+    "poweredBy": "Ritanya Sanstha"
+  }
+}
