@@ -56,6 +56,7 @@ module.exports = {
         },
       ],
       './plugins/withKotlinVersionFix',
+      './plugins/withHermesCommandFix',
     ],
 
     scheme: register.app.easProfileName,
