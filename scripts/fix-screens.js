@@ -3,25 +3,44 @@ const path = require('path');
 
 function processFile(filePath) {
   let c = fs.readFileSync(filePath, 'utf8');
-  if (!c.includes('CT.WithDefault')) return;
+  if (!c.includes('CT.')) return;          // skip files with no CT.* at all
   const orig = c;
 
-  // Replace CT.WithDefault<T,D> with WithDefault<T,D> via local alias.
-  // Metro needs the "WithDefault" name in AST to extract default values.
-  // Gradle codegen resolves the local alias to just T.
-  // IMPORTANT: do NOT remove "CodegenTypes as CT" import — CT.Double,
-  // CT.Int32, CT.Float, CT.DirectEventHandler must stay resolvable.
-  c = c.replace(/CT\.WithDefault</g, 'WithDefault<');
+  // Track whether we need the WithDefault alias
+  const hadWithDefault = c.includes('CT.WithDefault');
 
-  // Insert local alias AFTER the last closing-import line
-  const lines = c.split('\n');
-  let last = -1;
-  for (let i = 0; i < lines.length; i++) {
-    if (/from ['"][^'"]+['"];?\s*$/.test(lines[i])) last = i;
+  // Replace ALL CodegenTypes qualified names (CT.*) with bare identifiers.
+  //
+  // Root cause: RN 0.79 codegen's getTypeAnnotationName() does typeName.name.
+  // For TSQualifiedName (CT.Foo) typeName has left/right but NO .name → undefined.
+  // For a bare Identifier (Foo) typeName.name === 'Foo' → works.
+  //
+  // Specific failures without these fixes:
+  //   CT.WithDefault<>     → typeName.name=undefined → parseTopLevelType skips
+  //   CT.Double[]          → getTypeAnnotationForArray → type='TSTypeReference' → throws
+  //   CT.Float / CT.Int32  → getTypeAnnotationName → undefined → getCommonTypeAnnotation misses
+  //   CT.DirectEventHandler→ isEventHandler → eventNames.has(undefined) → false → throws
+  //   CT.UnsafeMixed[]     → same path as CT.Double[]
+  c = c.replace(/CT\.WithDefault</g,      'WithDefault<');
+  c = c.replace(/CT\.DirectEventHandler</g,'DirectEventHandler<');
+  c = c.replace(/CT\.Double/g,            'Double');
+  c = c.replace(/CT\.Float/g,             'Float');
+  c = c.replace(/CT\.Int32/g,             'Int32');
+  c = c.replace(/CT\.UnsafeMixed/g,       'UnsafeMixed');
+
+  // If we introduced WithDefault<>, inject a local alias so TypeScript is happy.
+  // parseTopLevelType recognises "WithDefault" by name and handles it as a
+  // built-in; Gradle resolves the alias (type WithDefault<T,_D>=T) to just T.
+  if (hadWithDefault) {
+    const lines = c.split('\n');
+    let last = -1;
+    for (let i = 0; i < lines.length; i++) {
+      if (/from ['"][^'"]+['"];?\s*$/.test(lines[i])) last = i;
+    }
+    if (last !== -1) lines.splice(last + 1, 0, 'type WithDefault<T, _D> = T;');
+    else lines.unshift('type WithDefault<T, _D> = T;');
+    c = lines.join('\n');
   }
-  if (last !== -1) lines.splice(last + 1, 0, 'type WithDefault<T, _D> = T;');
-  else lines.unshift('type WithDefault<T, _D> = T;');
-  c = lines.join('\n');
 
   if (c !== orig) {
     fs.writeFileSync(filePath, c);
@@ -39,7 +58,7 @@ function processDir(dir) {
 
 processDir(path.join(__dirname, '../node_modules/react-native-screens/src'));
 
-// Stub hermes-compiler npm package
+// Stub hermes-compiler npm package (Metro requires it at module resolution time)
 const hDir = path.join(__dirname, '../node_modules/hermes-compiler');
 if (!fs.existsSync(hDir)) {
   fs.mkdirSync(hDir, { recursive: true });
