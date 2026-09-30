@@ -45,3 +45,47 @@
  assertj = "3.25.1"
  
  [libraries]
+--- a/node_modules/@react-native/gradle-plugin/shared-testutil/build.gradle.kts
++++ b/node_modules/@react-native/gradle-plugin/shared-testutil/build.gradle.kts
+@@ -24,7 +24,7 @@
+ 
+ tasks.withType<KotlinCompile>().configureEach {
+   compilerOptions {
+-    apiVersion.set(KotlinVersion.KOTLIN_1_7)
++    apiVersion.set(KotlinVersion.KOTLIN_1_8)
+     // See comment above on JDK 11 support
+     jvmTarget.set(JvmTarget.JVM_11)
+     allWarningsAsErrors =
+--- a/node_modules/@react-native/gradle-plugin/settings-plugin/build.gradle.kts
++++ b/node_modules/@react-native/gradle-plugin/settings-plugin/build.gradle.kts
+@@ -53,7 +53,7 @@
+ 
+ tasks.withType<KotlinCompile>().configureEach {
+   compilerOptions {
+-    apiVersion.set(KotlinVersion.KOTLIN_1_7)
++    apiVersion.set(KotlinVersion.KOTLIN_1_8)
+     // See comment above on JDK 11 support
+     jvmTarget.set(JvmTarget.JVM_11)
+     allWarningsAsErrors =
+--- a/node_modules/@react-native/gradle-plugin/react-native-gradle-plugin/build.gradle.kts
++++ b/node_modules/@react-native/gradle-plugin/react-native-gradle-plugin/build.gradle.kts
+@@ -63,7 +63,7 @@
+ 
+ tasks.withType<KotlinCompile>().configureEach {
+   compilerOptions {
+-    apiVersion.set(KotlinVersion.KOTLIN_1_7)
++    apiVersion.set(KotlinVersion.KOTLIN_1_8)
+     // See comment above on JDK 11 support
+     jvmTarget.set(JvmTarget.JVM_11)
+     allWarningsAsErrors =
+--- a/node_modules/@react-native/gradle-plugin/shared/build.gradle.kts
++++ b/node_modules/@react-native/gradle-plugin/shared/build.gradle.kts
+@@ -30,7 +30,7 @@
+ 
+ tasks.withType<KotlinCompile>().configureEach {
+   compilerOptions {
+-    apiVersion.set(KotlinVersion.KOTLIN_1_7)
++    apiVersion.set(KotlinVersion.KOTLIN_1_8)
+     // See comment above on JDK 11 support
+     jvmTarget.set(JvmTarget.JVM_11)
+     allWarningsAsErrors =
