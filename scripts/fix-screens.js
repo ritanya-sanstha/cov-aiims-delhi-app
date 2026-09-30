@@ -1,63 +1,39 @@
 const fs = require('fs');
 const path = require('path');
 
-// Proper parser: handles CT.WithDefault<complex<nested>, default> correctly
-function replaceWithDefaults(content) {
-  const marker = 'CT.WithDefault<';
-  let result = '';
-  let i = 0;
-  while (i < content.length) {
-    const idx = content.indexOf(marker, i);
-    if (idx === -1) { result += content.slice(i); break; }
-    result += content.slice(i, idx);
-    let depth = 0;
-    let j = idx + marker.length;
-    let commaAt = -1;
-    let closeAt = -1;
-    while (j < content.length) {
-      const ch = content[j];
-      if (ch === '<') depth++;
-      else if (ch === '>') {
-        if (depth === 0) { closeAt = j; break; }
-        depth--;
-      } else if (ch === ',' && depth === 0 && commaAt === -1) {
-        commaAt = j;
-      }
-      j++;
-    }
-    if (commaAt !== -1 && closeAt !== -1) {
-      result += content.slice(idx + marker.length, commaAt).trim();
-      i = closeAt + 1;
-    } else {
-      result += marker;
-      i = idx + marker.length;
-    }
+function processFile(filePath) {
+  let c = fs.readFileSync(filePath, 'utf8');
+  if (!c.includes('CT.WithDefault')) return;
+  const orig = c;
+  c = c.replace(/CT\.WithDefault</g, 'WithDefault<');
+  c = c.replace(/,\s*CodegenTypes as CT/g, '');
+  c = c.replace(/CodegenTypes as CT,\s*/g, '');
+  const lines = c.split('\n');
+  let last = -1;
+  for (let i = 0; i < lines.length; i++) {
+    if (/from ['"][^'"]+['"];?\s*$/.test(lines[i])) last = i;
   }
-  return result;
+  if (last !== -1) lines.splice(last + 1, 0, 'type WithDefault<T, _D> = T;');
+  else lines.unshift('type WithDefault<T, _D> = T;');
+  c = lines.join('\n');
+  if (c !== orig) { fs.writeFileSync(filePath, c); console.log('[fix-screens] Fixed: ' + path.basename(filePath)); }
 }
 
 function processDir(dir) {
   if (!fs.existsSync(dir)) return;
-  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    if (entry.isDirectory()) processDir(path.join(dir, entry.name));
-    else if (entry.name.endsWith('.ts') || entry.name.endsWith('.tsx')) processFile(path.join(dir, entry.name));
+  for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+    if (e.isDirectory()) processDir(path.join(dir, e.name));
+    else if (e.name.endsWith('.ts') || e.name.endsWith('.tsx')) processFile(path.join(dir, e.name));
   }
 }
 
-function processFile(filePath) {
-  let c = fs.readFileSync(filePath, 'utf8');
-  const orig = c;
-  c = replaceWithDefaults(c);
-  if (c !== orig && !c.includes('CT.')) {
-    c = c.replace(/,\s*CodegenTypes as CT/g, '');
-    c = c.replace(/CodegenTypes as CT,\s*/g, '');
-  }
-  if (c !== orig) {
-    fs.writeFileSync(filePath, c);
-    console.log('[fix-screens] Fixed: ' + path.basename(filePath));
-  }
-}
+processDir(path.join(__dirname, '../node_modules/react-native-screens/src'));
 
-const srcDir = path.join(__dirname, '../node_modules/react-native-screens/src');
-processDir(srcDir);
+const hDir = path.join(__dirname, '../node_modules/hermes-compiler');
+if (!fs.existsSync(hDir)) {
+  fs.mkdirSync(hDir, { recursive: true });
+  fs.writeFileSync(path.join(hDir, 'package.json'), JSON.stringify({name:'hermes-compiler',version:'0.12.0',main:'index.js'}));
+  fs.writeFileSync(path.join(hDir, 'index.js'), 'module.exports={};');
+  console.log('[fix-screens] Created hermes-compiler stub');
+}
 console.log('[fix-screens] Done');
