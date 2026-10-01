@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Build 28: CT.* + ComponentRef + dual parser.js TSQualifiedName + hermes stub + Promise.kt
+ * Build 29: CT.* + ComponentRef + dual parser.js TSQualifiedName + hermes stub + Promise.kt
  */
 const fs   = require('fs');
 const path = require('path');
@@ -80,17 +80,16 @@ if (!fs.existsSync(hd)) {
   console.log('[fix-codegen] Created hermes-compiler stub');
 } else { console.log('[fix-codegen] hermes-compiler stub OK'); }
 
-// 5. Patch expo-modules-core Promise.kt — remove 'override' from reject methods
-//    that no longer match any interface method in Kotlin 2.2 strict override checking
+// 5. Patch expo-modules-core Promise.kt — exact string replace only 3 dead signatures
 const pkt = path.join(NM, 'expo-modules-core/android/src/main/java/expo/modules/kotlin/Promise.kt');
 if (fs.existsSync(pkt)) {
   let psrc = fs.readFileSync(pkt, 'utf8');
   const porig = psrc;
-  psrc = psrc.replace(/\s*override\s+(fun reject\()/g, ' $1');
-  if (psrc !== porig) {
-    fs.writeFileSync(pkt, psrc);
-    console.log('[fix-codegen] Patched Promise.kt override->fun reject');
-  } else { console.log('[fix-codegen] Promise.kt already OK'); }
-} else { console.log('[fix-codegen] Promise.kt not found (skip)'); }
+  psrc = psrc.replace('      override fun reject(code: String?, userInfo: WritableMap)', '      fun reject(code: String?, userInfo: WritableMap)');
+  psrc = psrc.replace('      override fun reject(code: String?, throwable: Throwable?, userInfo: WritableMap)', '      fun reject(code: String?, throwable: Throwable?, userInfo: WritableMap)');
+  psrc = psrc.replace('      override fun reject(code: String?, message: String?, userInfo: WritableMap)', '      fun reject(code: String?, message: String?, userInfo: WritableMap)');
+  if (psrc !== porig) { fs.writeFileSync(pkt, psrc); console.log('Patched Promise.kt: 3 signatures'); }
+  else { console.log('Promise.kt: no match (already patched?)'); }
+} else { console.log('Promise.kt not found'); }
 
-console.log('[fix-codegen] Build 28 done.');
+console.log('[fix-codegen] Build 29 done.');
