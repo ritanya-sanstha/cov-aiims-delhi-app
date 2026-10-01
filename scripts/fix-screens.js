@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Build 27: CT.* patches + React.ComponentRef fix + dual parser.js TSQualifiedName + hermes stub
+ * Build 28: CT.* + ComponentRef + dual parser.js TSQualifiedName + hermes stub + Promise.kt
  */
 const fs   = require('fs');
 const path = require('path');
@@ -80,4 +80,17 @@ if (!fs.existsSync(hd)) {
   console.log('[fix-codegen] Created hermes-compiler stub');
 } else { console.log('[fix-codegen] hermes-compiler stub OK'); }
 
-console.log('[fix-codegen] Build 27 done.');
+// 5. Patch expo-modules-core Promise.kt — remove 'override' from reject methods
+//    that no longer match any interface method in Kotlin 2.2 strict override checking
+const pkt = path.join(NM, 'expo-modules-core/android/src/main/java/expo/modules/kotlin/Promise.kt');
+if (fs.existsSync(pkt)) {
+  let psrc = fs.readFileSync(pkt, 'utf8');
+  const porig = psrc;
+  psrc = psrc.replace(/\s*override\s+(fun reject\()/g, ' $1');
+  if (psrc !== porig) {
+    fs.writeFileSync(pkt, psrc);
+    console.log('[fix-codegen] Patched Promise.kt override->fun reject');
+  } else { console.log('[fix-codegen] Promise.kt already OK'); }
+} else { console.log('[fix-codegen] Promise.kt not found (skip)'); }
+
+console.log('[fix-codegen] Build 28 done.');
