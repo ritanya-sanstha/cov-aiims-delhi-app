@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Build 29: CT.* + ComponentRef + dual parser.js TSQualifiedName + hermes stub + Promise.kt
+ * Build 30: CT.* + ComponentRef + dual parser.js TSQualifiedName + hermes stub + Promise.kt
  */
 const fs   = require('fs');
 const path = require('path');
@@ -80,16 +80,25 @@ if (!fs.existsSync(hd)) {
   console.log('[fix-codegen] Created hermes-compiler stub');
 } else { console.log('[fix-codegen] hermes-compiler stub OK'); }
 
-// 5. Patch expo-modules-core Promise.kt — exact string replace only 3 dead signatures
+// 5. Fix Promise.kt: change code: String? to code: String for 5 signatures
+// that the com.facebook.react.bridge.Promise interface now marks @NonNull in RN 0.79
 const pkt = path.join(NM, 'expo-modules-core/android/src/main/java/expo/modules/kotlin/Promise.kt');
 if (fs.existsSync(pkt)) {
   let psrc = fs.readFileSync(pkt, 'utf8');
   const porig = psrc;
-  psrc = psrc.replace('      override fun reject(code: String?, userInfo: WritableMap)', '      fun reject(code: String?, userInfo: WritableMap)');
-  psrc = psrc.replace('      override fun reject(code: String?, throwable: Throwable?, userInfo: WritableMap)', '      fun reject(code: String?, throwable: Throwable?, userInfo: WritableMap)');
-  psrc = psrc.replace('      override fun reject(code: String?, message: String?, userInfo: WritableMap)', '      fun reject(code: String?, message: String?, userInfo: WritableMap)');
-  if (psrc !== porig) { fs.writeFileSync(pkt, psrc); console.log('Patched Promise.kt: 3 signatures'); }
-  else { console.log('Promise.kt: no match (already patched?)'); }
-} else { console.log('Promise.kt not found'); }
+  const fixes = [
+    ['reject(code: String?, throwable: Throwable?)', 'reject(code: String, throwable: Throwable?)'],
+    ['reject(code: String?, message: String?, throwable: Throwable?)', 'reject(code: String, message: String?, throwable: Throwable?)'],
+    ['reject(code: String?, userInfo: WritableMap)', 'reject(code: String, userInfo: WritableMap)'],
+    ['reject(code: String?, throwable: Throwable?, userInfo: WritableMap)', 'reject(code: String, throwable: Throwable?, userInfo: WritableMap)'],
+    ['reject(code: String?, message: String?, userInfo: WritableMap)', 'reject(code: String, message: String?, userInfo: WritableMap)'],
+  ];
+  let count = 0;
+  for (const [from, to] of fixes) {
+    if (psrc.includes(from)) { psrc = psrc.replace(from, to); count++; }
+  }
+  if (count > 0) { fs.writeFileSync(pkt, psrc); console.log('[fix-codegen] Promise.kt: fixed ' + count + ' signatures'); }
+  else { console.log('[fix-codegen] Promise.kt: 0 matches — verify indentation'); }
+} else { console.log('[fix-codegen] Promise.kt not found'); }
 
-console.log('[fix-codegen] Build 29 done.');
+console.log('[fix-codegen] Build 30 done.');
