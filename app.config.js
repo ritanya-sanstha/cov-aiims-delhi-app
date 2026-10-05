@@ -35,6 +35,7 @@ module.exports = {
     },
 
     android: {
+      jsEngine: 'jsc',
       package: register.app.androidPackage,
       versionCode: register.app.versionCode,
       adaptiveIcon: {
