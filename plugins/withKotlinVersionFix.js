@@ -1,8 +1,8 @@
-const { withAppBuildGradle, withAndroidManifest } = require('@expo/config-plugins');
+const { withAppBuildGradle, withProjectBuildGradle, withAndroidManifest } = require('@expo/config-plugins');
 
 // Step 1+2: Fix Kotlin version and androidx.core resolution
 function withKotlinVersionFix(config) {
-  return withAppBuildGradle(config, (config) => {
+  return withProjectBuildGradle(config, (config) => {
     let contents = config.modResults.contents;
 
     // 1. Add kotlinVersion = "2.2.0" to buildscript ext (needed for Kotlin 2.2.0 / K2 compiler)
