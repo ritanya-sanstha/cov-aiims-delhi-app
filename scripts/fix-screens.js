@@ -87,7 +87,8 @@ if (fs.existsSync(pkt)) {
   let psrc = fs.readFileSync(pkt, 'utf8');
   const porig = psrc;
   const fixes = [
-    ['reject(code: String?, throwable: Throwable?)', 'reject(code: String, throwable: Throwable?)'],
+    ['reject(code: String?, message: String?)', 'reject(code: String, message: String?)'],
+        ['reject(code: String?, throwable: Throwable?)', 'reject(code: String, throwable: Throwable?)'],
     ['reject(code: String?, message: String?, throwable: Throwable?)', 'reject(code: String, message: String?, throwable: Throwable?)'],
     ['reject(code: String?, userInfo: WritableMap)', 'reject(code: String, userInfo: WritableMap)'],
     ['reject(code: String?, throwable: Throwable?, userInfo: WritableMap)', 'reject(code: String, throwable: Throwable?, userInfo: WritableMap)'],
@@ -100,5 +101,23 @@ if (fs.existsSync(pkt)) {
   if (count > 0) { fs.writeFileSync(pkt, psrc); console.log('[fix-codegen] Promise.kt: fixed ' + count + ' signatures'); }
   else { console.log('[fix-codegen] Promise.kt: 0 matches — verify indentation'); }
 } else { console.log('[fix-codegen] Promise.kt not found'); }
+// 5b. Fix KPromiseWrapper.kt: fix String? -> String at bridgePromise.reject call site
+const kpwPath = path.join(NM, 'expo-modules-core/android/src/main/java/expo/modules/kotlin/KPromiseWrapper.kt');
+if (fs.existsSync(kpwPath)) {
+  let kpwSrc = fs.readFileSync(kpwPath, 'utf8');
+  const oldCall = 'bridgePromise.reject(code, message, cause)';
+  const newCall = 'bridgePromise.reject(code ?: "UnknownCode", message, cause)';
+  if (kpwSrc.includes(oldCall)) {
+    kpwSrc = kpwSrc.replace(oldCall, newCall);
+    fs.writeFileSync(kpwPath, kpwSrc, 'utf8');
+    console.log('[fix-codegen] KPromiseWrapper.kt: patched reject call String? -> String');
+  } else {
+    console.log('[fix-codegen] KPromiseWrapper.kt: already patched or pattern not found');
+  }
+} else {
+  console.log('[fix-codegen] KPromiseWrapper.kt not found, skipping');
+}
+
+
 
 console.log('[fix-codegen] Build 30 done.');
