@@ -197,3 +197,27 @@ callerFiles.forEach(rel => {
 });
 
 console.log('[fix-codegen] Build 35 done.');
+
+// Step 9: Fix expo-modules-core ReactStylesDiffMapBackingFieldAccessor.java
+// In RN 0.79, ReactStylesDiffMap.internal_backingMap() was removed.
+// The backing field is now package-private mBackingMap; direct field access is
+// valid since both classes share package com.facebook.react.uimanager.
+const backingFieldPath = path.join(
+  NM,
+  'expo-modules-core/android/src/main/java/com/facebook/react/uimanager/ReactStylesDiffMapBackingFieldAccessor.java'
+);
+if (fs.existsSync(backingFieldPath)) {
+  let bfSrc = fs.readFileSync(backingFieldPath, 'utf8');
+  const oldMethod = /diffMap\.internal_backingMap\(\)/;
+  const newField = 'diffMap.mBackingMap';
+  if (oldMethod.test(bfSrc)) {
+    bfSrc = bfSrc.replace(oldMethod, newField);
+    fs.writeFileSync(backingFieldPath, bfSrc, 'utf8');
+    console.log('[fix-codegen] ReactStylesDiffMapBackingFieldAccessor.java: replaced internal_backingMap() with mBackingMap field access');
+  } else {
+    console.log('[fix-codegen] ReactStylesDiffMapBackingFieldAccessor.java: internal_backingMap() pattern not found (may already be patched)');
+  }
+} else {
+  console.log('[fix-codegen] ReactStylesDiffMapBackingFieldAccessor.java: file not found, skipping');
+}
+
