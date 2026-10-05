@@ -221,3 +221,96 @@ if (fs.existsSync(backingFieldPath)) {
   console.log('[fix-codegen] ReactStylesDiffMapBackingFieldAccessor.java: file not found, skipping');
 }
 
+
+// Step 10: Fix expo-constants ConstantsService.kt  migrate Java-style getters to Kotlin val properties
+// In expo-modules-core 57.0.19, ConstantsInterface changed from get*() methods to Kotlin val properties.
+const csPath = path.join(NM, 'expo-constants/android/src/main/java/expo/modules/constants/ConstantsService.kt');
+if (fs.existsSync(csPath)) {
+  let cs = fs.readFileSync(csPath, 'utf8');
+  const patches = [
+    [/override fun getConstants\(\):\s*Map<String,\s*Any\?>\s*\{/, 'override val constants: Map<String, Any?>\n    get() {'],
+    [/override fun getAppScopeKey\(\):\s*String\?\s*=\s*context\.packageName/, 'override val appScopeKey: String?\n        get() = context.packageName'],
+    [/override fun getDeviceName\(\):\s*String\s*=\s*Build\.MODEL/, 'override val deviceName: String\n        get() = Build.MODEL'],
+    [/override fun getStatusBarHeight\(\)\s*=\s*statusBarHeightInternal/, 'override val statusBarHeight: Int\n        get() = statusBarHeightInternal'],
+    [/override fun getSystemVersion\(\):\s*String\s*=\s*Build\.VERSION\.RELEASE/, 'override val systemVersion: String\n        get() = Build.VERSION.RELEASE'],
+    [/override fun getSystemFonts\(\)\s*=\s*listOf\(/, 'override val systemFonts: List<String>\n        get() = listOf('],
+  ];
+  let changed = false;
+  for (const [pattern, replacement] of patches) {
+    if (pattern.test(cs)) {
+      cs = cs.replace(pattern, replacement);
+      changed = true;
+    }
+  }
+  if (changed) {
+    fs.writeFileSync(csPath, cs, 'utf8');
+    console.log('[fix-codegen] Step 10: expo-constants ConstantsService.kt patched to Kotlin val properties.');
+  } else {
+    console.log('[fix-codegen] Step 10: ConstantsService.kt already patched or pattern not found.');
+  }
+} else {
+  console.log('[fix-codegen] Step 10: ConstantsService.kt not found, skipping.');
+}
+
+// Step 11: Fix expo-log-box ExpoLogBoxDevSupportManager.kt  RN 0.79 DevSupportManagerBase API changes
+// getUniqueTag() abstract method added, loadSplitBundleFromServer() abstract method added,
+// showNewJavaError signature changed (Throwable -> Throwable?),
+// lastErrorTitle/lastErrorStack became val (immutable), uniqueTag -> getUniqueTag()
+const lbPath = path.join(NM, '@expo/log-box/android/src/main/expo/modules/logbox/ExpoLogBoxDevSupportManager.kt');
+if (fs.existsSync(lbPath)) {
+  let lb = fs.readFileSync(lbPath, 'utf8');
+
+  // Add import for DevSplitBundleCallback if missing
+  if (!lb.includes('DevSplitBundleCallback')) {
+    lb = lb.replace(
+      'import com.facebook.react.devsupport',
+      'import com.facebook.react.devsupport.interfaces.DevSplitBundleCallback\nimport com.facebook.react.devsupport'
+    );
+  }
+
+  // Fix showNewJavaError: Throwable -> Throwable?
+  lb = lb.replace(/override fun showNewJavaError\(message: String\?, e: Throwable\)/, 'override fun showNewJavaError(message: String?, e: Throwable?)');
+
+  // Remove lastErrorTitle/lastErrorStack assignments (they are val in RN 0.79 base)
+  lb = lb.replace(/\s+lastErrorTitle = message\n/, '\n');
+  lb = lb.replace(/\s+lastErrorStack = stack\n/, '\n');
+
+  // Add getUniqueTag() to ExpoLogBoxDevSupportManager if missing
+  if (!lb.includes('getUniqueTag') || !lb.includes('"ExpoLogBox"')) {
+    const classMatch = lb.match(/class ExpoLogBoxDevSupportManager[\s\S]*?\{/);
+    if (classMatch) {
+      const insertAfter = classMatch[0];
+      const insertPos = lb.indexOf(insertAfter) + insertAfter.length;
+      const getUniqTag = '\n  override fun getUniqueTag(): String = "ExpoLogBox"\n';
+      lb = lb.slice(0, insertPos) + getUniqTag + lb.slice(insertPos);
+    }
+  }
+
+  // Add loadSplitBundleFromServer stub to ExpoLogBoxDevSupportManager if missing
+  const class2Start = lb.indexOf('class ExpoBridgelessDevSupportManager');
+  const loadStub = '\n  override fun loadSplitBundleFromServer(bundlePath: String, callback: DevSplitBundleCallback) {\n    // no-op\n  }\n';
+  if (class2Start !== -1 && !lb.slice(0, class2Start).includes('loadSplitBundleFromServer')) {
+    const insertBefore = lb.lastIndexOf('\n', class2Start - 1);
+    lb = lb.slice(0, insertBefore) + loadStub + lb.slice(insertBefore);
+  }
+
+  // Fix uniqueTag val -> getUniqueTag() in ExpoBridgelessDevSupportManager
+  lb = lb.replace(
+    /override val uniqueTag:\s*String[\s\S]*?get\(\)\s*=\s*"Bridgeless"/,
+    'override fun getUniqueTag(): String = "Bridgeless"'
+  );
+
+  // Add loadSplitBundleFromServer to ExpoBridgelessDevSupportManager if missing
+  const class2Start2 = lb.indexOf('class ExpoBridgelessDevSupportManager');
+  if (class2Start2 !== -1) {
+    const class2End = lb.indexOf('\n}', class2Start2);
+    if (class2End !== -1 && !lb.slice(class2Start2, class2End).includes('loadSplitBundleFromServer')) {
+      lb = lb.slice(0, class2End) + loadStub + lb.slice(class2End);
+    }
+  }
+
+  fs.writeFileSync(lbPath, lb, 'utf8');
+  console.log('[fix-codegen] Step 11: expo-log-box ExpoLogBoxDevSupportManager.kt patched for RN 0.79.');
+} else {
+  console.log('[fix-codegen] Step 11: ExpoLogBoxDevSupportManager.kt not found, skipping.');
+}
