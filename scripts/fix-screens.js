@@ -155,14 +155,14 @@ const formSheetPath = path.join(NM, 'react-native-screens/android/src/main/java/
 if (fs.existsSync(formSheetPath)) {
   let src = fs.readFileSync(formSheetPath, 'utf8');
   // Use regex to handle both single-line and multi-line variants of the 3-arg call
-  const oldCallRegex = /jsPointerDispatcher\?\.onChildStartedNativeGesture\(childView,\s*\n?\s*ev,\s*\n?\s*eventDispatcher\)/;
-  const newCall = 'jsPointerDispatcher?.onChildStartedNativeGesture(ev, eventDispatcher)';
+  const oldCallRegex = /jsTouchDispatcher\.onChildStartedNativeGesture\(ev,\s*\n?\s*eventDispatcher,\s*\n?\s*themedReactContext\)/;
+  const newCall = 'jsTouchDispatcher.onChildStartedNativeGesture(ev, eventDispatcher)';
   if (oldCallRegex.test(src)) {
     src = src.replace(oldCallRegex, newCall);
     fs.writeFileSync(formSheetPath, src, 'utf8');
-    console.log('[fix-codegen] FormSheetContentView.kt: patched onChildStartedNativeGesture (removed childView arg)');
+    console.log('[fix-codegen] FormSheetContentView.kt: patched jsTouchDispatcher.onChildStartedNativeGesture (removed themedReactContext arg)');
   } else {
-    console.log('[fix-codegen] FormSheetContentView.kt: already patched or pattern not found');
+    console.log('[fix-codegen] FormSheetContentView.kt: jsTouchDispatcher pattern not found (may be already patched or version differs)');
   }
 } else {
   console.log('[fix-codegen] FormSheetContentView.kt not found, skipping');
