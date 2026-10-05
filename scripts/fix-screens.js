@@ -120,4 +120,42 @@ if (fs.existsSync(kpwPath)) {
 
 
 
-console.log('[fix-codegen] Build 30 done.');
+
+// Step 6: Fix UIManagerHelperExt.kt  Kotlin can't call Java static getUIManager on a receiver instance
+// In RN 0.79 UIManagerHelper.getUIManager is static; must call it as UIManagerHelper.getUIManager(...)
+const uiManagerExtPath = path.join(NM, 'react-native-screens/android/src/main/java/com/swmansion/rnscreens/gamma/helpers/UIManagerHelperExt.kt');
+if (fs.existsSync(uiManagerExtPath)) {
+  let src = fs.readFileSync(uiManagerExtPath, 'utf8');
+  const oldLine = 'checkNotNull(this.getUIManager(reactContext, UIManagerType.FABRIC))';
+  const newLine = 'checkNotNull(UIManagerHelper.getUIManager(reactContext, UIManagerType.FABRIC))';
+  if (src.includes(oldLine)) {
+    src = src.replace(oldLine, newLine);
+    fs.writeFileSync(uiManagerExtPath, src, 'utf8');
+    console.log('[fix-codegen] UIManagerHelperExt.kt: patched this.getUIManager -> UIManagerHelper.getUIManager');
+  } else {
+    console.log('[fix-codegen] UIManagerHelperExt.kt: already patched or pattern not found');
+  }
+} else {
+  console.log('[fix-codegen] UIManagerHelperExt.kt not found, skipping');
+}
+
+// Step 7: Fix FormSheetContentView.kt  RN 0.79 dropped childView param from JSPointerDispatcher.onChildStartedNativeGesture
+// Old: onChildStartedNativeGesture(childView, ev, eventDispatcher)   3 args
+// New: onChildStartedNativeGesture(ev, eventDispatcher)              2 args
+const formSheetPath = path.join(NM, 'react-native-screens/android/src/main/java/com/swmansion/rnscreens/gamma/modals/formsheet/FormSheetContentView.kt');
+if (fs.existsSync(formSheetPath)) {
+  let src = fs.readFileSync(formSheetPath, 'utf8');
+  const oldCall = 'jsPointerDispatcher?.onChildStartedNativeGesture(childView, ev, eventDispatcher)';
+  const newCall = 'jsPointerDispatcher?.onChildStartedNativeGesture(ev, eventDispatcher)';
+  if (src.includes(oldCall)) {
+    src = src.replace(oldCall, newCall);
+    fs.writeFileSync(formSheetPath, src, 'utf8');
+    console.log('[fix-codegen] FormSheetContentView.kt: patched onChildStartedNativeGesture (removed childView arg)');
+  } else {
+    console.log('[fix-codegen] FormSheetContentView.kt: already patched or pattern not found');
+  }
+} else {
+  console.log('[fix-codegen] FormSheetContentView.kt not found, skipping');
+}
+
+console.log('[fix-codegen] Build 34 done.');
