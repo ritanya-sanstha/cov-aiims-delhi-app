@@ -121,20 +121,29 @@ if (fs.existsSync(kpwPath)) {
 
 
 
-// Step 6: Fix UIManagerHelperExt.kt  Kotlin can't call Java static getUIManager on a receiver instance
-// In RN 0.79 UIManagerHelper.getUIManager is static; must call it as UIManagerHelper.getUIManager(...)
+
+// Step 6: Fix UIManagerHelperExt.kt - Rewrite as top-level function (not extension)
+// K2 Kotlin 2.2.0 strict rule: extension functions CANNOT be called via Java class reference.
+// Callers do: UIManagerHelper\n    .getFabricUIManagerNotNull(ctx) - invalid in K2 strict mode.
+// Fix: make getFabricUIManagerNotNull a plain top-level function; update callers in Step 8.
 const uiManagerExtPath = path.join(NM, 'react-native-screens/android/src/main/java/com/swmansion/rnscreens/gamma/helpers/UIManagerHelperExt.kt');
 if (fs.existsSync(uiManagerExtPath)) {
-  let src = fs.readFileSync(uiManagerExtPath, 'utf8');
-  const oldLine = 'checkNotNull(this.getUIManager(reactContext, UIManagerType.FABRIC))';
-  const newLine = 'checkNotNull(UIManagerHelper.getUIManager(reactContext, UIManagerType.FABRIC))';
-  if (src.includes(oldLine)) {
-    src = src.replace(oldLine, newLine);
-    fs.writeFileSync(uiManagerExtPath, src, 'utf8');
-    console.log('[fix-codegen] UIManagerHelperExt.kt: patched this.getUIManager -> UIManagerHelper.getUIManager');
-  } else {
-    console.log('[fix-codegen] UIManagerHelperExt.kt: already patched or pattern not found');
-  }
+  const newContent = [
+    'package com.swmansion.rnscreens.gamma.helpers',
+    '',
+    'import com.facebook.react.bridge.UIManager',
+    'import com.facebook.react.uimanager.ThemedReactContext',
+    'import com.facebook.react.uimanager.UIManagerHelper',
+    'import com.facebook.react.uimanager.common.UIManagerType',
+    '',
+    'internal fun getFabricUIManagerNotNull(reactContext: ThemedReactContext): UIManager =',
+    '    checkNotNull(UIManagerHelper.getUIManager(reactContext, UIManagerType.FABRIC)) {',
+    '        "[RNScreens] UIManager must not be null"',
+    '    }',
+    '',
+  ].join('\n');
+  fs.writeFileSync(uiManagerExtPath, newContent, 'utf8');
+  console.log('[fix-codegen] UIManagerHelperExt.kt: rewritten as top-level function (K2 fix)');
 } else {
   console.log('[fix-codegen] UIManagerHelperExt.kt not found, skipping');
 }
@@ -158,4 +167,32 @@ if (fs.existsSync(formSheetPath)) {
   console.log('[fix-codegen] FormSheetContentView.kt not found, skipping');
 }
 
-console.log('[fix-codegen] Build 34 done.');
+
+// Step 8: Fix gamma callers - change UIManagerHelper\n.getFabricUIManagerNotNull(
+// to getFabricUIManagerNotNull( so they call the top-level function (K2 compatible)
+// The import 'import com.swmansion.rnscreens.gamma.helpers.getFabricUIManagerNotNull' still works.
+const callerFiles = [
+  'react-native-screens/android/src/main/java/com/swmansion/rnscreens/gamma/modals/formsheet/FormSheetContentView.kt',
+  'react-native-screens/android/src/main/java/com/swmansion/rnscreens/gamma/stack/header/config/StackHeaderConfig.kt',
+  'react-native-screens/android/src/main/java/com/swmansion/rnscreens/gamma/stack/host/StackHost.kt',
+  'react-native-screens/android/src/main/java/com/swmansion/rnscreens/gamma/tabs/host/TabsHost.kt',
+];
+callerFiles.forEach(rel => {
+  const p = path.join(NM, rel);
+  if (!fs.existsSync(p)) { console.log('[fix-codegen] caller not found: ' + rel); return; }
+  let src = fs.readFileSync(p, 'utf8');
+  // Pattern: UIManagerHelper followed by newline+whitespace+.getFabricUIManagerNotNull(
+  // Replace with: getFabricUIManagerNotNull(  (top-level call, import still valid)
+  const patched = src.replace(
+    /UIManagerHelper\r?\n[ \t]*\.getFabricUIManagerNotNull\(/g,
+    'getFabricUIManagerNotNull('
+  );
+  if (patched !== src) {
+    fs.writeFileSync(p, patched, 'utf8');
+    console.log('[fix-codegen] Fixed getFabricUIManagerNotNull calls in: ' + path.basename(p));
+  } else {
+    console.log('[fix-codegen] Pattern not found (may already be fixed) in: ' + path.basename(p));
+  }
+});
+
+console.log('[fix-codegen] Build 35 done.');
