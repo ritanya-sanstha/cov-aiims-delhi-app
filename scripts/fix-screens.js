@@ -154,10 +154,11 @@ if (fs.existsSync(uiManagerExtPath)) {
 const formSheetPath = path.join(NM, 'react-native-screens/android/src/main/java/com/swmansion/rnscreens/gamma/modals/formsheet/FormSheetContentView.kt');
 if (fs.existsSync(formSheetPath)) {
   let src = fs.readFileSync(formSheetPath, 'utf8');
-  const oldCall = 'jsPointerDispatcher?.onChildStartedNativeGesture(childView, ev, eventDispatcher)';
+  // Use regex to handle both single-line and multi-line variants of the 3-arg call
+  const oldCallRegex = /jsPointerDispatcher\?\.onChildStartedNativeGesture\(childView,\s*\n?\s*ev,\s*\n?\s*eventDispatcher\)/;
   const newCall = 'jsPointerDispatcher?.onChildStartedNativeGesture(ev, eventDispatcher)';
-  if (src.includes(oldCall)) {
-    src = src.replace(oldCall, newCall);
+  if (oldCallRegex.test(src)) {
+    src = src.replace(oldCallRegex, newCall);
     fs.writeFileSync(formSheetPath, src, 'utf8');
     console.log('[fix-codegen] FormSheetContentView.kt: patched onChildStartedNativeGesture (removed childView arg)');
   } else {
