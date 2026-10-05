@@ -286,12 +286,13 @@ if (fs.existsSync(lbPath)) {
     }
   }
 
-  // Add loadSplitBundleFromServer stub to ExpoLogBoxDevSupportManager if missing
+  // Add loadSplitBundleFromServer stub INSIDE ExpoLogBoxDevSupportManager (before its closing })
   const class2Start = lb.indexOf('class ExpoBridgelessDevSupportManager');
-  const loadStub = '\n  override fun loadSplitBundleFromServer(bundlePath: String, callback: DevSplitBundleCallback) {\n    // no-op\n  }\n';
+  const loadStub = '\n  override fun loadSplitBundleFromServer(bundlePath: String, callback: com.facebook.react.devsupport.interfaces.DevSplitBundleCallback) {\n    // no-op\n  }';
   if (class2Start !== -1 && !lb.slice(0, class2Start).includes('loadSplitBundleFromServer')) {
-    const insertBefore = lb.lastIndexOf('\n', class2Start - 1);
-    lb = lb.slice(0, insertBefore) + loadStub + lb.slice(insertBefore);
+    // Find the closing } of ExpoLogBoxDevSupportManager (last unindented \n} before class2)
+    const class1End = lb.lastIndexOf('\n}', class2Start);
+    lb = lb.slice(0, class1End) + loadStub + '\n' + lb.slice(class1End);
   }
 
   // Fix uniqueTag val -> getUniqueTag() in ExpoBridgelessDevSupportManager
@@ -314,3 +315,30 @@ if (fs.existsSync(lbPath)) {
 } else {
   console.log('[fix-codegen] Step 11: ExpoLogBoxDevSupportManager.kt not found, skipping.');
 }
+// 12. Fix ConstantsModule.kt: use appContext.service<ConstantsInterface>() instead of appContext.constants
+const cmPath = path.join(NM, 'expo-constants/android/src/main/java/expo/modules/constants/ConstantsModule.kt');
+if (fs.existsSync(cmPath)) {
+  let cm = fs.readFileSync(cmPath, 'utf8');
+  const origCm = cm;
+  // Add import for ConstantsInterface if missing
+  if (!cm.includes('ConstantsInterface')) {
+    cm = cm.replace(
+      'import expo.modules.kotlin.modules.ModuleDefinition',
+      'import expo.modules.kotlin.modules.ModuleDefinition\nimport expo.modules.interfaces.constants.ConstantsInterface'
+    );
+  }
+  // Fix the broken accessor: appContext.constants?.constants -> appContext.service<ConstantsInterface>()?.constants
+  cm = cm.replace(
+    'return@Constants appContext.constants?.constants ?: emptyMap()',
+    'return@Constants appContext.service<ConstantsInterface>()?.constants ?: emptyMap()'
+  );
+  if (cm !== origCm) {
+    fs.writeFileSync(cmPath, cm, 'utf8');
+    console.log('[fix-codegen] Step 12: expo-constants ConstantsModule.kt patched for service<ConstantsInterface>() API.');
+  } else {
+    console.log('[fix-codegen] Step 12: ConstantsModule.kt already patched or pattern not found.');
+  }
+} else {
+  console.log('[fix-codegen] Step 12: ConstantsModule.kt not found, skipping.');
+}
+
