@@ -342,3 +342,57 @@ if (fs.existsSync(cmPath)) {
   console.log('[fix-codegen] Step 12: ConstantsModule.kt not found, skipping.');
 }
 
+// 13. Fix ExpoReactHostFactory.kt: ReactHostImpl constructor named args + removed APIs in RN 0.79
+const rhfPath = path.join(NM, 'expo/android/src/main/java/expo/modules/ExpoReactHostFactory.kt');
+if (fs.existsSync(rhfPath)) {
+  let rhf = fs.readFileSync(rhfPath, 'utf8');
+  const origRhf = rhf;
+  // Fix 1: named args -> positional (Java constructors don't expose named params to Kotlin)
+  rhf = rhf.replace(
+    'ReactHostImpl(\n          context,\n          delegate = reactHostDelegate,\n          componentFactory = componentFactory,\n          allowPackagerServerAccess = true,\n          useDevSupport = useDevSupport\n        )',
+    'ReactHostImpl(\n          context,\n          reactHostDelegate,\n          componentFactory,\n          true,\n          useDevSupport\n        )'
+  );
+  // Fix 2: devSupportManager removed in RN 0.79
+  rhf = rhf.replace(
+    'handler.onDidCreateDevSupportManager(reactHostImpl.devSupportManager)',
+    '// handler.onDidCreateDevSupportManager(reactHostImpl.devSupportManager) // removed RN0.79'
+  );
+  // Fix 3: addReactInstanceEventListener removed in RN 0.79
+  rhf = rhf.replace(
+    /\s*reactHostImpl\.addReactInstanceEventListener\(object : ReactInstanceEventListener \{[\s\S]*?\}\)/,
+    '\n      // addReactInstanceEventListener removed in RN 0.79'
+  );
+  if (rhf !== origRhf) {
+    fs.writeFileSync(rhfPath, rhf, 'utf8');
+    console.log('[fix-codegen] Step 13: ExpoReactHostFactory.kt patched for RN 0.79 API changes.');
+  } else {
+    console.log('[fix-codegen] Step 13: ExpoReactHostFactory.kt already patched or pattern not found.');
+  }
+} else {
+  console.log('[fix-codegen] Step 13: ExpoReactHostFactory.kt not found, skipping.');
+}
+
+// 14. Fix NativeArrayBuffer.cpp: remove tryGetMutableBuffer (removed from JSI in RN 0.79)
+const nabPath = path.join(NM, 'expo-modules-core/android/src/main/cpp/NativeArrayBuffer.cpp');
+if (fs.existsSync(nabPath)) {
+  let nab = fs.readFileSync(nabPath, 'utf8');
+  const origNab = nab;
+  // Remove mutable branch for arrayBuffer overload
+  nab = nab.replace(
+    /  auto mutableBuffer = arrayBuffer\.tryGetMutableBuffer\(runtime\);\n  if \(mutableBuffer\) \{[\s\S]*?\}\n\n  size_t size = arrayBuffer\.size\(runtime\)/,
+    '  size_t size = arrayBuffer.size(runtime)'
+  );
+  // Remove mutable branch for typedArray overload
+  nab = nab.replace(
+    /  auto mutableBuffer = backingBuffer\.tryGetMutableBuffer\(runtime\);\n  if \(mutableBuffer\) \{[\s\S]*?\}\n\n  auto byteBuffer = jni::JByteBuffer::allocateDirect/,
+    '  auto byteBuffer = jni::JByteBuffer::allocateDirect'
+  );
+  if (nab !== origNab) {
+    fs.writeFileSync(nabPath, nab, 'utf8');
+    console.log('[fix-codegen] Step 14: NativeArrayBuffer.cpp patched - removed tryGetMutableBuffer.');
+  } else {
+    console.log('[fix-codegen] Step 14: NativeArrayBuffer.cpp already patched or pattern not found.');
+  }
+} else {
+  console.log('[fix-codegen] Step 14: NativeArrayBuffer.cpp not found, skipping.');
+}
