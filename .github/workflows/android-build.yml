@@ -34,14 +34,26 @@ jobs:
       - name: Install dependencies
         run: npm ci --legacy-peer-deps
 
-      - name: Run postinstall patches
-        run: npm run postinstall || true
+      - name: Run fix-screens script (skip patch-package in CI)
+        run: node scripts/fix-screens.js || true
 
       - name: Expo Prebuild
         run: npx expo prebuild --platform android --clean --no-install
         env:
           REGISTER_FILE: ./registers/aiims-delhi.register.json
           ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
+
+      - name: Verify and patch gradle.properties
+        run: |
+          echo "--- android/gradle.properties ---"
+          cat android/gradle.properties
+          if grep -q "^newArchEnabled" android/gradle.properties; then
+            sed -i 's/^newArchEnabled=.*/newArchEnabled=false/' android/gradle.properties
+          else
+            echo "newArchEnabled=false" >> android/gradle.properties
+          fi
+          echo "--- patched ---"
+          grep -i "arch" android/gradle.properties || true
 
       - name: Build debug APK
         run: |
