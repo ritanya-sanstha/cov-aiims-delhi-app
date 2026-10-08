@@ -43,12 +43,23 @@ jobs:
           REGISTER_FILE: ./registers/aiims-delhi.register.json
           ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
 
-      - name: Pin Gradle to 8.8 (RN 0.79 requires Gradle 8.x not 9.x)
+      - name: Show gradle version (expo target)
+        run: cat android/gradle/wrapper/gradle-wrapper.properties
+
+      - name: Fix react-android classpath for Gradle 9.x
         run: |
-          sed -i 's|gradle-[0-9.]*-bin.zip|gradle-8.8-bin.zip|g' android/gradle/wrapper/gradle-wrapper.properties
-          sed -i 's|gradle-[0-9.]*-all.zip|gradle-8.8-bin.zip|g' android/gradle/wrapper/gradle-wrapper.properties
-          echo "--- gradle-wrapper.properties ---"
-          cat android/gradle/wrapper/gradle-wrapper.properties
+          RN_VERSION=$(node -p "require('./node_modules/react-native/package.json').version")
+          echo "React Native version: $RN_VERSION"
+          # @react-native/gradle-plugin fails to add react-android to compile classpath in Gradle 9.x
+          # Adding it explicitly fixes ReactNativeApplicationEntryPoint unresolved error
+          if ! grep -q "com.facebook.react:react-android" android/app/build.gradle; then
+            sed -i "0,/^dependencies {/s/^dependencies {/dependencies {\n    implementation(\"com.facebook.react:react-android:${RN_VERSION}\")/" android/app/build.gradle
+            echo "Added react-android:$RN_VERSION"
+          else
+            echo "react-android already present"
+          fi
+          echo "--- app/build.gradle dependencies ---"
+          grep -A 8 "^dependencies" android/app/build.gradle | head -15
 
       - name: Ensure newArchEnabled=false in gradle.properties
         run: |
