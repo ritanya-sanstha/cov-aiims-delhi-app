@@ -1,3 +1,4 @@
+import 'react-native-gesture-handler';
 /**
  * app/_layout.tsx  — Root layout (Expo Router)
  *
