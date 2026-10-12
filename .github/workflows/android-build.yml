@@ -88,6 +88,17 @@ jobs:
           else
             echo "newArchEnabled=false" >> android/gradle.properties
           fi
+      - name: Patch expo-modules-core NativeStatePropsGetter.cpp for RN 0.79 API change
+        run: |
+          python3 -c "
+          f = 'node_modules/expo-modules-core/android/src/main/cpp/fabric/NativeStatePropsGetter.cpp'
+          c = open(f).read()
+          old = 'state->updateState(std::move(newState), react::EventQueue::UpdateMode::unstable_Immediate);'
+          new_str = 'state->updateState(std::move(newState));'
+          n = c.count(old)
+          open(f, 'w').write(c.replace(old, new_str))
+          print(str(n) + ' occurrence(s) patched')
+          "
       - run: cd android && chmod +x gradlew && ./gradlew assembleDebug --no-daemon
         env:
           ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
