@@ -12,42 +12,33 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
           cache: 'npm'
-
       - uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
-
       - run: yes | sdkmanager --licenses || true
         env:
           ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
-
       - run: npm ci --legacy-peer-deps
-
       - run: node scripts/fix-screens.js || true
-
       - run: npx expo prebuild --platform android --clean --no-install
         env:
           REGISTER_FILE: ./registers/aiims-delhi.register.json
           ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
-
       - run: cat android/gradle/wrapper/gradle-wrapper.properties
-
       - name: Pin react-android and hermes-android versions (Gradle 9.x BOM workaround)
         run: |
           RN_VERSION=$(node -p "require('./node_modules/react-native/package.json').version")
           echo "React Native version: $RN_VERSION"
-          sed -i "s/implementation(\"com.facebook.react:react-android\")/implementation(\"com.facebook.react:react-android:${RN_VERSION}\")/" android/app/build.gradle
-          sed -i "s/implementation(\"com.facebook.react:hermes-android\")/implementation(\"com.facebook.react:hermes-android:${RN_VERSION}\")/" android/app/build.gradle
+          sed -i "s/implementation(\"com.facebook.react:react-android\")/implementation(\"com.facebook.react:react-android:$\{RN_VERSION}\")/g" android/app/build.gradle
+          sed -i "s/implementation(\"com.facebook.react:hermes-android\")/implementation(\"com.facebook.react:hermes-android:$\{RN_VERSION}\")/g" android/app/build.gradle
           echo "--- react-native deps in app/build.gradle ---"
           grep -E "react-android|hermes-android" android/app/build.gradle || echo "WARNING: not found!"
-
-      - name: Patch MainApplication.kt for RN 0.79 compatibility
+      - name: Patch MainApplication.kt - fix ReactNativeHostWrapper removed in Expo SDK 57
         run: |
           MAIN_KT=$(find android/app/src/main -name "MainApplication.kt" | head -1)
           echo "=== ORIGINAL MainApplication.kt ==="
@@ -60,35 +51,26 @@ jobs:
             "import android.app.Application" \
             "import com.facebook.react.PackageList" \
             "import com.facebook.react.ReactApplication" \
-            "import com.facebook.react.ReactHost" \
             "import com.facebook.react.ReactNativeHost" \
             "import com.facebook.react.ReactPackage" \
             "import com.facebook.react.defaults.DefaultNewArchitectureEntryPoint.load" \
-            "import com.facebook.react.defaults.DefaultReactHost.getDefaultReactHost" \
             "import com.facebook.react.defaults.DefaultReactNativeHost" \
             "import com.facebook.soloader.SoLoader" \
             "import expo.modules.ApplicationLifecycleDispatcher" \
-            "import expo.modules.ReactNativeHostWrapper" \
             "" \
             "class MainApplication : Application(), ReactApplication {" \
             "" \
-            "  override val reactNativeHost: ReactNativeHost" \
-            "    get() = ReactNativeHostWrapper(" \
-            "        this," \
-            "        object : DefaultReactNativeHost(this) {" \
-            "          override fun getPackages(): List<ReactPackage> =" \
-            "              PackageList(this).packages.apply {}" \
+            "  override val reactNativeHost: ReactNativeHost =" \
+            "    object : DefaultReactNativeHost(this) {" \
+            "      override fun getPackages(): List<ReactPackage> = PackageList(this).packages" \
             "" \
-            '          override fun getJSMainModuleName(): String = ".expo/.virtual-metro-entry"' \
+            '      override fun getJSMainModuleName(): String = ".expo/.virtual-metro-entry"' \
             "" \
-            "          override fun getUseDeveloperSupport(): Boolean = BuildConfig.DEBUG" \
+            "      override fun getUseDeveloperSupport(): Boolean = BuildConfig.DEBUG" \
             "" \
-            "          override val isNewArchEnabled: Boolean = BuildConfig.IS_NEW_ARCHITECTURE_ENABLED" \
-            "          override val isHermesEnabled: Boolean = BuildConfig.IS_HERMES_ENABLED" \
-            "        })" \
-            "" \
-            "  override val reactHost: ReactHost" \
-            "    get() = getDefaultReactHost(applicationContext, reactNativeHost)" \
+            "      override val isNewArchEnabled: Boolean = BuildConfig.IS_NEW_ARCHITECTURE_ENABLED" \
+            "      override val isHermesEnabled: Boolean = BuildConfig.IS_HERMES_ENABLED" \
+            "    }" \
             "" \
             "  override fun onCreate() {" \
             "    super.onCreate()" \
@@ -102,18 +84,15 @@ jobs:
             > "$MAIN_KT"
           echo "=== PATCHED MainApplication.kt ==="
           cat "$MAIN_KT"
-
       - run: |
           if grep -q "^newArchEnabled" android/gradle.properties; then
             sed -i 's/^newArchEnabled=.*/newArchEnabled=false/' android/gradle.properties
           else
             echo "newArchEnabled=false" >> android/gradle.properties
           fi
-
       - run: cd android && chmod +x gradlew && ./gradlew assembleDebug --no-daemon
         env:
           ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
-
       - uses: actions/upload-artifact@v4
         with:
           name: "aiims-delhi-apk-${{ github.run_number }}"
