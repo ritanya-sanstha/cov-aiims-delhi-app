@@ -32,10 +32,8 @@ jobs:
       - run: cat android/gradle/wrapper/gradle-wrapper.properties
       - name: Pin react-android and hermes-android versions (Gradle 9.x BOM workaround)
         run: |
-          RN_VERSION=$(node -p "require('./node_modules/react-native/package.json').version")
-          echo "React Native version: $RN_VERSION"
-          sed -i "s/implementation(\"com.facebook.react:react-android\")/implementation(\"com.facebook.react:react-android:$\{RN_VERSION}\")/g" android/app/build.gradle
-          sed -i "s/implementation(\"com.facebook.react:hermes-android\")/implementation(\"com.facebook.react:hermes-android:$\{RN_VERSION}\")/g" android/app/build.gradle
+          sed -i 's/implementation("com.facebook.react:react-android")/implementation("com.facebook.react:react-android:0.79.0")/g' android/app/build.gradle
+          sed -i 's/implementation("com.facebook.react:hermes-android")/implementation("com.facebook.react:hermes-android:0.79.0")/g' android/app/build.gradle
           echo "--- react-native deps in app/build.gradle ---"
           grep -E "react-android|hermes-android" android/app/build.gradle || echo "WARNING: not found!"
       - name: Patch MainApplication.kt - fix ReactNativeHostWrapper removed in Expo SDK 57
