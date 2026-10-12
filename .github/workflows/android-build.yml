@@ -28,7 +28,7 @@ jobs:
           ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
       - run: npm ci --legacy-peer-deps
       - run: node scripts/fix-screens.js || true
-      - run: sed -i "s/'jsc'/'hermes'/" app.config.js && echo "Build 13 - jsEngine patched to hermes"
+      - run: sed -i "s/'jsc'/'hermes'/" app.config.js && echo "Build 18 - release APK to fix crash"
       - run: npx expo prebuild --platform android --clean --no-install
         env:
           REGISTER_FILE: ./registers/aiims-delhi.register.json
@@ -40,50 +40,57 @@ jobs:
           sed -i 's/implementation("com.facebook.react:hermes-android")/implementation("com.facebook.react:hermes-android:0.79.0")/g' android/app/build.gradle
           echo "--- react-native deps in app/build.gradle ---"
           grep -E "react-android|hermes-android" android/app/build.gradle || echo "WARNING: not found!"
-      - name: Patch MainApplication.kt - fix ReactNativeHostWrapper removed in Expo SDK 57
+      - name: Patch MainApplication.kt and set getUseDeveloperSupport=false
         run: |
           MAIN_KT=$(find android/app/src/main -name "MainApplication.kt" | head -1)
           echo "=== ORIGINAL MainApplication.kt ==="
           cat "$MAIN_KT"
           PKG=$(grep "^package " "$MAIN_KT" | sed 's/^package //')
           echo "=== Package: [$PKG] ==="
-          printf '%s\n' \
-            "package $PKG" \
-            "" \
-            "import android.app.Application" \
-            "import com.facebook.react.PackageList" \
-            "import com.facebook.react.ReactApplication" \
-            "import com.facebook.react.ReactNativeHost" \
-            "import com.facebook.react.ReactPackage" \
-            "import com.facebook.react.defaults.DefaultNewArchitectureEntryPoint.load" \
-            "import com.facebook.react.defaults.DefaultReactNativeHost" \
-            "import com.facebook.soloader.SoLoader" \
-            "import expo.modules.ApplicationLifecycleDispatcher" \
-            "" \
-            "class MainApplication : Application(), ReactApplication {" \
-            "" \
-            "  override val reactNativeHost: ReactNativeHost =" \
-            "    object : DefaultReactNativeHost(this) {" \
-            "      override fun getPackages(): List<ReactPackage> = PackageList(this).packages" \
-            "" \
-            '      override fun getJSMainModuleName(): String = ".expo/.virtual-metro-entry"' \
-            "" \
-            "      override fun getUseDeveloperSupport(): Boolean = BuildConfig.DEBUG" \
-            "" \
-            "      override val isNewArchEnabled: Boolean = BuildConfig.IS_NEW_ARCHITECTURE_ENABLED" \
-            "      override val isHermesEnabled: Boolean = BuildConfig.IS_HERMES_ENABLED" \
-            "    }" \
-            "" \
-            "  override fun onCreate() {" \
-            "    super.onCreate()" \
-            "    SoLoader.init(this, false)" \
-            "    if (BuildConfig.IS_NEW_ARCHITECTURE_ENABLED) {" \
-            "      load()" \
-            "    }" \
-            "    ApplicationLifecycleDispatcher.onApplicationCreate(this)" \
-            "  }" \
-            "}" \
-            > "$MAIN_KT"
+          python3 - "$MAIN_KT" "$PKG" <<'PYEOF'
+import sys
+kt_path = sys.argv[1]
+pkg = sys.argv[2]
+content = f"""package {pkg}
+
+import android.app.Application
+import com.facebook.react.PackageList
+import com.facebook.react.ReactApplication
+import com.facebook.react.ReactNativeHost
+import com.facebook.react.ReactPackage
+import com.facebook.react.defaults.DefaultNewArchitectureEntryPoint.load
+import com.facebook.react.defaults.DefaultReactNativeHost
+import com.facebook.soloader.SoLoader
+import expo.modules.ApplicationLifecycleDispatcher
+
+class MainApplication : Application(), ReactApplication {{
+
+  override val reactNativeHost: ReactNativeHost =
+    object : DefaultReactNativeHost(this) {{
+      override fun getPackages(): List<ReactPackage> = PackageList(this).packages
+
+      override fun getJSMainModuleName(): String = ".expo/.virtual-metro-entry"
+
+      override fun getUseDeveloperSupport(): Boolean = false
+
+      override val isNewArchEnabled: Boolean = BuildConfig.IS_NEW_ARCHITECTURE_ENABLED
+      override val isHermesEnabled: Boolean = BuildConfig.IS_HERMES_ENABLED
+    }}
+
+  override fun onCreate() {{
+    super.onCreate()
+    SoLoader.init(this, false)
+    if (BuildConfig.IS_NEW_ARCHITECTURE_ENABLED) {{
+      load()
+    }}
+    ApplicationLifecycleDispatcher.onApplicationCreate(this)
+  }}
+}}
+"""
+with open(kt_path, 'w') as f:
+    f.write(content)
+print("MainApplication.kt written successfully")
+PYEOF
           echo "=== PATCHED MainApplication.kt ==="
           cat "$MAIN_KT"
       - run: |
@@ -103,18 +110,44 @@ jobs:
           open(f, 'w').write(c.replace(old, new_str))
           print(str(n) + ' occurrence(s) patched')
           "
-      - run: cd android && chmod +x gradlew && ./gradlew assembleDebug --no-daemon
+      - name: Configure release signing with generated keystore
+        run: |
+          keytool -genkey -v -keystore /tmp/aiims-release.keystore -alias app -keyalg RSA -keysize 2048 -validity 10000 -storepass android123 -keypass android123 -dname "CN=AIIMS Delhi App,O=Ritanya Sanstha,C=IN"
+          echo "Keystore generated at /tmp/aiims-release.keystore"
+          python3 - <<'PYEOF'
+import re
+
+with open('android/app/build.gradle', 'r') as f:
+    content = f.read()
+
+signing_block = """
+        release {
+            storeFile file('/tmp/aiims-release.keystore')
+            storePassword 'android123'
+            keyAlias 'app'
+            keyPassword 'android123'
+        }"""
+
+content = content.replace('signingConfigs {', 'signingConfigs {' + signing_block, 1)
+content = re.sub(r'(\s*release \{)', r'\1\n            signingConfig signingConfigs.release', content, count=1)
+
+with open('android/app/build.gradle', 'w') as f:
+    f.write(content)
+print('Signing config injected successfully')
+PYEOF
+          grep -A8 "release {" android/app/build.gradle | head -25
+      - run: cd android && chmod +x gradlew && ./gradlew assembleRelease --no-daemon
         env:
           ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
       - uses: actions/upload-artifact@v4
         with:
           name: "aiims-delhi-apk-${{ github.run_number }}"
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          path: android/app/build/outputs/apk/release/app-release.apk
           retention-days: 30
       - name: Publish GitHub Release (public download link)
         if: success()
         run: |
-          APK_PATH=$(find android/app/build/outputs/apk/debug -name "*.apk" | head -1)
+          APK_PATH=$(find android/app/build/outputs/apk/release -name "*.apk" | head -1)
           echo "APK: $APK_PATH"
           gh release delete "latest-build" --yes 2>/dev/null || true
           gh release create "latest-build" "$APK_PATH" \
