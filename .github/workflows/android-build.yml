@@ -25,6 +25,7 @@ jobs:
           ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
       - run: npm ci --legacy-peer-deps
       - run: node scripts/fix-screens.js || true
+      - run: sed -i "s/'jsc'/'hermes'/" app.config.js && echo "Build 13 - jsEngine patched to hermes"
       - run: npx expo prebuild --platform android --clean --no-install
         env:
           REGISTER_FILE: ./registers/aiims-delhi.register.json
