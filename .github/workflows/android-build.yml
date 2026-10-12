@@ -108,15 +108,15 @@ jobs:
           name: "aiims-delhi-apk-${{ github.run_number }}"
           path: android/app/build/outputs/apk/debug/app-debug.apk
           retention-days: 30
-        - name: Publish GitHub Release (public download link)
-          if: success()
-          run: |
-            APK_PATH=$(find android/app/build/outputs/apk/debug -name "*.apk" | head -1)
-            echo "APK: $APK_PATH"
-            gh release delete "latest-build" --yes 2>/dev/null || true
-            gh release create "latest-build" "$APK_PATH" \
-              --title "Latest Build (#${{ github.run_number }})" \
-              --notes "Android APK — download and install on your device. Build ${{ github.run_number }}." \
-              --latest
-          env:
-            GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Publish GitHub Release (public download link)
+        if: success()
+        run: |
+          APK_PATH=$(find android/app/build/outputs/apk/debug -name "*.apk" | head -1)
+          echo "APK: $APK_PATH"
+          gh release delete "latest-build" --yes 2>/dev/null || true
+          gh release create "latest-build" "$APK_PATH" \
+            --title "Latest Build (#${{ github.run_number }})" \
+            --notes "Android APK - download and install on your device. Build ${{ github.run_number }}." \
+            --latest
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
