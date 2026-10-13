@@ -1,9 +1,17 @@
 name: Android APK Build
 
+# Builds an installable release APK straight from Expo's generated Android
+# project. No source patching: package.json pins one consistent Expo SDK (53)
+# so Expo's own native code matches the React Native version. If a build
+# breaks, fix package.json / app.config.js, do not add patch steps here.
+
 on:
   push:
     branches: [main]
   workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   build:
@@ -26,76 +34,37 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Accept Android SDK licenses
-        run: yes | sdkmanager --licenses || true
-        env:
-          ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
-
       - name: Install dependencies
-        run: npm ci --legacy-peer-deps
+        run: npm ci
 
-      - name: Run fix-screens script
-        run: node scripts/fix-screens.js || true
+      - name: Type check
+        run: npx tsc --noEmit
 
-      - name: Enable new arch + Hermes in app.config.js BEFORE prebuild
-        run: |
-          sed -i 's/newArchEnabled: false/newArchEnabled: true/' app.config.js || true
-          sed -i "s/'jsc'/'hermes'/" app.config.js || true
-          grep -E "newArchEnabled|jsEngine|hermes" app.config.js || true
-
-      - name: Expo Prebuild
+      - name: Expo prebuild (generate Android project)
         run: npx expo prebuild --platform android --clean --no-install
         env:
           REGISTER_FILE: ./registers/aiims-delhi.register.json
-          ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
 
-      - name: Verify gradle.properties and MainApplication.kt after prebuild
-        run: |
-          cat android/gradle.properties
-          head -20 android/app/src/main/java/in/ritanyasanstha/aiimsdelhi/MainApplication.kt
-
-      - name: Pin react-android and hermes-android to 0.79.0
-        run: |
-          sed -i 's/react-android")/react-android:0.79.0")/g' android/app/build.gradle
-          sed -i "s/react-android')/react-android:0.79.0')/g" android/app/build.gradle
-          sed -i 's/hermes-android")/hermes-android:0.79.0")/g' android/app/build.gradle
-          sed -i "s/hermes-android')/hermes-android:0.79.0')/g" android/app/build.gradle
-          echo "=== Dependency lines in build.gradle ==="
-          grep -n "react-android\|hermes-android" android/app/build.gradle || echo "WARNING: not found"
-          echo "=== FULL android/app/build.gradle ==="
-          cat android/app/build.gradle
-
-      - name: Add bundleInDebug=true to gradle.properties
-        run: grep -q "^bundleInDebug" android/gradle.properties && sed -i 's/^bundleInDebug=.*/bundleInDebug=true/' android/gradle.properties || echo "bundleInDebug=true" >> android/gradle.properties
-
-      - name: Patch NativeStatePropsGetter.cpp for RN 0.79
-        run: python3 -c "f='node_modules/expo-modules-core/android/src/main/cpp/fabric/NativeStatePropsGetter.cpp'; c=open(f).read(); old='state->updateState(std::move(newState), react::EventQueue::UpdateMode::unstable_Immediate);'; n=c.count(old); open(f,'w').write(c.replace(old,'state->updateState(std::move(newState));')); print(str(n)+' occurrence(s) patched')"
-
-      - name: Build debug APK
+      - name: Build release APK
         run: |
           cd android
           chmod +x gradlew
-          set +e
-          ./gradlew assembleDebug --no-daemon --stacktrace > /tmp/build.log 2>&1
-          GRADLE_EXIT=$?
-          cd ..
-          set -e
-          echo "=== Gradle exit code: $GRADLE_EXIT ==="
-          echo "=== APK files found after build ==="
-          find android/app/build -name "*.apk" 2>/dev/null || echo "NO APKS FOUND"
-          ls -la android/app/build/outputs/apk/debug/ 2>/dev/null || echo "NO DEBUG APK DIR"
-          if [ "$GRADLE_EXIT" -ne 0 ]; then
-            echo "===== GRADLE FAILURE SUMMARY ====="
-            grep -E "FAILURE:|What went wrong:|Execution failed for task|Could not resolve|> No such|A problem occurred|error: |^e: |Unresolved reference|cannot find symbol" /tmp/build.log | head -50 || true
-            echo "===== FIRST 600 LINES OF BUILD LOG ====="
-            head -600 /tmp/build.log
-            exit 1
-          else
-            echo "===== BUILD SUCCEEDED ====="
-            tail -50 /tmp/build.log
-          fi
+          ./gradlew assembleRelease --no-daemon --stacktrace 2>&1 | tee /tmp/build.log
+        shell: bash
         env:
-          ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
+          REGISTER_FILE: ./registers/aiims-delhi.register.json
+
+      - name: Verify APK contents
+        run: |
+          APK=android/app/build/outputs/apk/release/app-release.apk
+          test -f "$APK" || { echo "::error::APK not found"; exit 1; }
+          echo "APK size: $(du -h "$APK" | cut -f1)"
+          LIST=$(unzip -l "$APK")
+          # RN 0.79 merges its native libs into libreactnative.so (OpenSourceMergedSoMapping)
+          for f in assets/index.android.bundle libhermes libreactnative.so; do
+            echo "$LIST" | grep -q "$f" || { echo "::error::missing $f in APK"; exit 1; }
+          done
+          echo "JS bundle, Hermes and React Native native libs present."
 
       - name: Upload build log on failure
         if: failure()
@@ -106,17 +75,21 @@ jobs:
           if-no-files-found: warn
           retention-days: 7
 
-      - name: Verify libreact_featureflagsjni.so in APK
-        run: |
-          APK="android/app/build/outputs/apk/debug/app-debug.apk"
-          echo "APK size: $(du -h $APK | cut -f1)"
-          unzip -l "$APK" | grep "libreact_featureflagsjni" || echo "CRITICAL MISSING: libreact_featureflagsjni.so"
-          unzip -l "$APK" | grep "lib/" | head -40
-
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: aiims-delhi-debug-${{ github.run_number }}
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          name: aiims-delhi-apk-${{ github.run_number }}
+          path: android/app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error
           retention-days: 30
+
+      - name: Publish GitHub Release (public download link)
+        run: |
+          APK=android/app/build/outputs/apk/release/app-release.apk
+          gh release delete latest-build --yes --cleanup-tag 2>/dev/null || true
+          gh release create latest-build "$APK" \
+            --title "Latest Build (#${{ github.run_number }})" \
+            --notes "Android APK. Build ${{ github.run_number }}, commit ${GITHUB_SHA::7}." \
+            --latest
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

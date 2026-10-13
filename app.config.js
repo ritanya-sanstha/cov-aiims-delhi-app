@@ -21,7 +21,7 @@ module.exports = {
     orientation: 'portrait',
     icon: `./assets/logos/${register.branding.logoFile}`,
     userInterfaceStyle: 'light',
-    newArchEnabled: false,
+    newArchEnabled: true,
 
     splash: {
       image: `./assets/logos/${register.branding.logoFile}`,
@@ -35,7 +35,6 @@ module.exports = {
     },
 
     android: {
-      jsEngine: 'jsc',
       package: register.app.androidPackage,
       versionCode: register.app.versionCode,
       adaptiveIcon: {
@@ -52,12 +51,9 @@ module.exports = {
         {
           android: {
             usesCleartextTraffic: false,
-            kotlinVersion: '2.2.0',
           },
         },
       ],
-      './plugins/withKotlinVersionFix',
-      './plugins/withHermesCommandFix',
     ],
 
     scheme: register.app.easProfileName,

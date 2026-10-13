@@ -32,7 +32,8 @@ import {
   Platform,
   BackHandler,
 } from 'react-native';
-import WebView, { WebViewNavigation, WebViewErrorEvent } from 'react-native-webview';
+import WebView, { WebViewNavigation } from 'react-native-webview';
+import type { WebViewErrorEvent } from 'react-native-webview/lib/WebViewTypes';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { REGISTER, siteUrl, isAllowedUrl } from '../config';
