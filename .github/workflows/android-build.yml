@@ -28,68 +28,94 @@ jobs:
           ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
       - run: npm ci --legacy-peer-deps
       - run: node scripts/fix-screens.js || true
-      - run: sed -i "s/'jsc'/'hermes'/" app.config.js && echo "Build 18 - release APK to fix crash"
+      - run: sed -i "s/'jsc'/'hermes'/" app.config.js && echo "Build 21 - debug APK with bundled JS"
       - run: npx expo prebuild --platform android --clean --no-install
         env:
           REGISTER_FILE: ./registers/aiims-delhi.register.json
           ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
       - run: cat android/gradle/wrapper/gradle-wrapper.properties
-      - name: Pin react-android and hermes-android versions (Gradle 9.x BOM workaround)
+      - name: Pin react-android and hermes-android versions
         run: |
           sed -i 's/implementation("com.facebook.react:react-android")/implementation("com.facebook.react:react-android:0.79.0")/g' android/app/build.gradle
           sed -i 's/implementation("com.facebook.react:hermes-android")/implementation("com.facebook.react:hermes-android:0.79.0")/g' android/app/build.gradle
-          echo "--- react-native deps in app/build.gradle ---"
           grep -E "react-android|hermes-android" android/app/build.gradle || echo "WARNING: not found!"
-      - name: Patch MainApplication.kt and set getUseDeveloperSupport=false
+      - name: Patch MainApplication.kt
+        env:
+          PATCH_SCRIPT: |
+            import sys
+            kt_path = sys.argv[1]
+            pkg = sys.argv[2]
+            content = f"""package {pkg}
+
+import android.app.Application
+import com.facebook.react.PackageList
+import com.facebook.react.ReactApplication
+import com.facebook.react.ReactNativeHost
+import com.facebook.react.ReactPackage
+import com.facebook.react.defaults.DefaultNewArchitectureEntryPoint.load
+import com.facebook.react.defaults.DefaultReactNativeHost
+import com.facebook.soloader.SoLoader
+import expo.modules.ApplicationLifecycleDispatcher
+
+class MainApplication : Application(), ReactApplication {{
+
+  override val reactNativeHost: ReactNativeHost =
+    object : DefaultReactNativeHost(this) {{
+      override fun getPackages(): List<ReactPackage> = PackageList(this).packages
+      override fun getJSMainModuleName(): String = ".expo/.virtual-metro-entry"
+      override fun getUseDeveloperSupport(): Boolean = false
+      override val isNewArchEnabled: Boolean = BuildConfig.IS_NEW_ARCHITECTURE_ENABLED
+      override val isHermesEnabled: Boolean = BuildConfig.IS_HERMES_ENABLED
+    }}
+
+  override fun onCreate() {{
+    super.onCreate()
+    SoLoader.init(this, false)
+    if (BuildConfig.IS_NEW_ARCHITECTURE_ENABLED) {{
+      load()
+    }}
+    ApplicationLifecycleDispatcher.onApplicationCreate(this)
+  }}
+}}
+"""
+            with open(kt_path, 'w') as f:
+                f.write(content)
+            print("MainApplication.kt patched ok")
         run: |
           MAIN_KT=$(find android/app/src/main -name "MainApplication.kt" | head -1)
-          echo "=== ORIGINAL MainApplication.kt ==="
-          cat "$MAIN_KT"
           PKG=$(grep "^package " "$MAIN_KT" | sed 's/^package //')
-          echo "=== Package: [$PKG] ==="
-          python3 scripts/patch-main-application.py "$MAIN_KT" "$PKG"
-          echo "=== PATCHED MainApplication.kt ==="
+          echo "$PATCH_SCRIPT" | python3 - "$MAIN_KT" "$PKG"
           cat "$MAIN_KT"
       - run: |
-          if grep -q "^newArchEnabled" android/gradle.properties; then
-            sed -i 's/^newArchEnabled=.*/newArchEnabled=false/' android/gradle.properties
-          else
-            echo "newArchEnabled=false" >> android/gradle.properties
-          fi
-      - name: Patch expo-modules-core NativeStatePropsGetter.cpp for RN 0.79 API change
+          grep -q "^newArchEnabled" android/gradle.properties && sed -i 's/^newArchEnabled=.*/newArchEnabled=false/' android/gradle.properties || echo "newArchEnabled=false" >> android/gradle.properties
+          echo "bundleInDebug=true" >> android/gradle.properties
+      - name: Patch expo-modules-core cpp
         run: |
           python3 -c "
           f = 'node_modules/expo-modules-core/android/src/main/cpp/fabric/NativeStatePropsGetter.cpp'
           c = open(f).read()
           old = 'state->updateState(std::move(newState), react::EventQueue::UpdateMode::unstable_Immediate);'
-          new_str = 'state->updateState(std::move(newState));'
-          n = c.count(old)
-          open(f, 'w').write(c.replace(old, new_str))
-          print(str(n) + ' occurrence(s) patched')
+          open(f, 'w').write(c.replace(old, 'state->updateState(std::move(newState));'))
+          print('patched')
           "
-      - name: Configure release signing with generated keystore
-        run: |
-          keytool -genkey -v -keystore /tmp/aiims-release.keystore -alias app -keyalg RSA -keysize 2048 -validity 10000 -storepass android123 -keypass android123 -dname "CN=AIIMS Delhi App,O=Ritanya Sanstha,C=IN"
-          echo "Keystore generated at /tmp/aiims-release.keystore"
-          python3 scripts/configure-release-signing.py /tmp/aiims-release.keystore
-          grep -A8 "release {" android/app/build.gradle | head -25
-      - run: cd android && chmod +x gradlew && ./gradlew assembleRelease --no-daemon
+      - name: Build debug APK
+        run: cd android && chmod +x gradlew && ./gradlew assembleDebug --no-daemon
         env:
           ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
+      - name: Verify JS bundle in APK
+        run: |
+          APK=$(find android/app/build/outputs/apk/debug -name "*.apk" | head -1)
+          unzip -l "$APK" | grep -E "bundle|assets" | head -20
       - uses: actions/upload-artifact@v4
         with:
           name: "aiims-delhi-apk-${{ github.run_number }}"
-          path: android/app/build/outputs/apk/release/app-release.apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
           retention-days: 30
-      - name: Publish GitHub Release (public download link)
+      - name: Publish GitHub Release
         if: success()
         run: |
-          APK_PATH=$(find android/app/build/outputs/apk/release -name "*.apk" | head -1)
-          echo "APK: $APK_PATH"
+          APK_PATH=$(find android/app/build/outputs/apk/debug -name "*.apk" | head -1)
           gh release delete "latest-build" --yes 2>/dev/null || true
-          gh release create "latest-build" "$APK_PATH" \
-            --title "Latest Build (#${{ github.run_number }})" \
-            --notes "Android APK - download and install on your device. Build ${{ github.run_number }}." \
-            --latest
+          gh release create "latest-build" "$APK_PATH" --title "Latest Build (#${{ github.run_number }})" --notes "Build ${{ github.run_number }} - debug APK with JS bundle embedded." --latest
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
