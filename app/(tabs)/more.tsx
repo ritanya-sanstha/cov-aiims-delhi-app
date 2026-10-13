@@ -4,6 +4,7 @@
  */
 import { Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
 import { REGISTER, siteUrl } from '../../src/config';
@@ -23,12 +24,13 @@ function Row({ icon, label, onPress, external = true }: { icon: IoniconName; lab
 export default function MoreScreen() {
   const { institute, standard, branding, website, navigation } = REGISTER;
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const version = Constants.expoConfig?.version ?? '';
   const open = (path: string) => () => { Linking.openURL(siteUrl(path)).catch(() => {}); };
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      <View style={[styles.header, { backgroundColor: branding.primaryColor }]}>
+      <View style={[styles.header, { backgroundColor: branding.primaryColor, paddingTop: insets.top + 24 }]}>
         <Text style={[styles.title, { color: branding.accentColor }]}>{institute.name}</Text>
         {!!institute.tagline && <Text style={styles.headerText}>{institute.tagline}</Text>}
         {!!institute.description && <Text style={styles.headerSub}>{institute.description}</Text>}

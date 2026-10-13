@@ -35,6 +35,7 @@ import {
 import WebView, { WebViewNavigation } from 'react-native-webview';
 import type { WebViewErrorEvent } from 'react-native-webview/lib/WebViewTypes';
 import { useFocusEffect, useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { REGISTER, siteUrl, isAllowedUrl } from '../config';
 
@@ -46,6 +47,7 @@ interface Props {
 
 export default function SiteWebView({ path }: Props) {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const webViewRef = useRef<WebView>(null);
   // Full-screen spinner only for the very first load; later navigations show
   // a thin progress bar so the page stays visible and taps feel instant.
@@ -102,7 +104,7 @@ export default function SiteWebView({ path }: Props) {
   if (error) {
     return (
       <ScrollView
-        contentContainerStyle={[styles.center, { backgroundColor: '#F0F2F5' }]}
+        contentContainerStyle={[styles.center, { backgroundColor: '#F0F2F5', paddingTop: insets.top + 32 }]}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={primary} />}
       >
         <Ionicons name="wifi-outline" size={48} color="#9CA3AF" />
@@ -116,7 +118,7 @@ export default function SiteWebView({ path }: Props) {
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top, backgroundColor: primary }]}>
       {initialLoading && (
         <View style={[styles.loader, { backgroundColor: primary }]}>
           <ActivityIndicator size="large" color={accent} />
@@ -155,7 +157,7 @@ export default function SiteWebView({ path }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F0F2F5' },
-  webview:   { flex: 1 },
+  webview:   { flex: 1, backgroundColor: '#FFFFFF' },
   progress: { position: 'absolute', top: 0, left: 0, height: 3, zIndex: 11 },
   loader: {
     ...StyleSheet.absoluteFillObject,
