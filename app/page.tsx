@@ -7,6 +7,9 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import WebView from 'react-native-webview';
 import { REGISTER, siteUrl, isAllowedUrl } from '../src/config';
+import { hideSiteBottomNavScript } from '../src/siteScripts';
+
+const HIDE_SITE_NAV_JS = hideSiteBottomNavScript();
 
 export default function PageScreen() {
   const { path, title } = useLocalSearchParams<{ path: string; title?: string }>();
@@ -26,6 +29,7 @@ export default function PageScreen() {
       <WebView
         source={{ uri: siteUrl(path ?? '/') }}
         style={styles.webview}
+        injectedJavaScript={HIDE_SITE_NAV_JS}
         onShouldStartLoadWithRequest={(r) => isAllowedUrl(r.url)}
         sharedCookiesEnabled
         thirdPartyCookiesEnabled
