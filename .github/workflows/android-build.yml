@@ -62,8 +62,8 @@ jobs:
           sed -i "s/hermes-android')/hermes-android:0.79.0')/g" android/app/build.gradle
           echo "=== Dependency lines in build.gradle ==="
           grep -n "react-android\|hermes-android" android/app/build.gradle || echo "WARNING: not found"
-          echo "=== build.gradle first 80 lines ==="
-          head -80 android/app/build.gradle
+          echo "=== FULL android/app/build.gradle ==="
+          cat android/app/build.gradle
 
       - name: Add bundleInDebug=true to gradle.properties
         run: grep -q "^bundleInDebug" android/gradle.properties && sed -i 's/^bundleInDebug=.*/bundleInDebug=true/' android/gradle.properties || echo "bundleInDebug=true" >> android/gradle.properties
@@ -75,13 +75,25 @@ jobs:
         run: |
           cd android
           chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon --stacktrace 2>&1 | tee /tmp/build.log || {
+          set +e
+          ./gradlew assembleDebug --no-daemon --stacktrace > /tmp/build.log 2>&1
+          GRADLE_EXIT=$?
+          cd ..
+          set -e
+          echo "=== Gradle exit code: $GRADLE_EXIT ==="
+          echo "=== APK files found after build ==="
+          find android/app/build -name "*.apk" 2>/dev/null || echo "NO APKS FOUND"
+          ls -la android/app/build/outputs/apk/debug/ 2>/dev/null || echo "NO DEBUG APK DIR"
+          if [ "$GRADLE_EXIT" -ne 0 ]; then
             echo "===== KOTLIN / COMPILE ERRORS ====="
-            grep -E "^e: |Unresolved reference|cannot find symbol|error: " /tmp/build.log | head -50 || true
-            echo "===== LAST 80 LINES ====="
-            tail -80 /tmp/build.log
+            grep -E "^e: |Unresolved reference|cannot find symbol|error: " /tmp/build.log | head -80 || true
+            echo "===== LAST 300 LINES ====="
+            tail -300 /tmp/build.log
             exit 1
-          }
+          else
+            echo "===== BUILD SUCCEEDED ====="
+            tail -50 /tmp/build.log
+          fi
         env:
           ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
 
