@@ -71,7 +71,6 @@ jobs:
 
       - name: Build debug APK
         run: |
-          set -o pipefail
           cd android
           chmod +x gradlew
           ./gradlew assembleDebug --no-daemon --stacktrace
