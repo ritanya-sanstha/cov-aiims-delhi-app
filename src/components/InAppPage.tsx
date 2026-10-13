@@ -9,9 +9,9 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import WebView, { WebViewNavigation } from 'react-native-webview';
 import { REGISTER, siteUrl, isAllowedUrl } from '../config';
-import { hideSiteBottomNavScript } from '../siteScripts';
+import { siteInjectedScript } from '../siteScripts';
 
-const HIDE_SITE_NAV_JS = hideSiteBottomNavScript();
+const HIDE_SITE_NAV_JS = siteInjectedScript();
 
 export default function InAppPage({ path, title }: { path: string; title?: string }) {
   const router = useRouter();

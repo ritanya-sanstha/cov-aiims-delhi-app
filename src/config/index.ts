@@ -52,6 +52,8 @@ export interface InstituteRegister {
     hideSiteBottomNavMarkers?: string[];
     /** Shown as "Contact us" on the More screen (opens the mail app) */
     contactEmail?: string;
+    /** Font size (px) of the website's header title inside the app; 0 = leave as is */
+    headerTitleFontPx?: number;
     allowedDomains: string[];
   };
   branding: {
@@ -82,7 +84,7 @@ export const REGISTER: InstituteRegister =
     // Fallback for bare metro / local dev without REGISTER_FILE set
     institute: { name: 'COV – AIIMS Delhi', shortName: 'AIIMS Delhi', code: 'AD', tagline: 'Alumni Network', description: '' },
     app: { appName: 'AIIMS Delhi Alumni', bundleId: 'in.ritanyasanstha.aiimsdelhi', androidPackage: 'in.ritanyasanstha.aiimsdelhi', versionCode: 1, easProfileName: 'aiims-delhi' },
-    website: { baseUrl: 'https://aiimsdelhi.ritanyasanstha.in', loginPath: '/login', homePath: '/', authCheckPath: '/profile', profilePath: '/profile', signOutButtonText: 'Sign Out', hideSiteBottomNavMarkers: ['mentors', 'jobs'], contactEmail: 'contact@ritanyasanstha.org', allowedDomains: ['aiimsdelhi.ritanyasanstha.in', 'ritanyasanstha.in'] },
+    website: { baseUrl: 'https://aiimsdelhi.ritanyasanstha.in', loginPath: '/login', homePath: '/', authCheckPath: '/profile', profilePath: '/profile', signOutButtonText: 'Sign Out', hideSiteBottomNavMarkers: ['mentors', 'jobs'], contactEmail: 'contact@ritanyasanstha.org', headerTitleFontPx: 14, allowedDomains: ['aiimsdelhi.ritanyasanstha.in', 'ritanyasanstha.in'] },
     branding: { logoFile: 'aiims-delhi-logo.png', primaryColor: '#1B2B5E', accentColor: '#C9A84C', statusBarStyle: 'light', splashBg: '#1B2B5E', helplineColor: '#EF4444' },
     navigation: {
       tabs: [

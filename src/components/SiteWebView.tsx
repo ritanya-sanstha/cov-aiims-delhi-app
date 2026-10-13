@@ -38,9 +38,9 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { REGISTER, siteUrl, isAllowedUrl } from '../config';
-import { hideSiteBottomNavScript } from '../siteScripts';
+import { siteInjectedScript } from '../siteScripts';
 
-const HIDE_SITE_NAV_JS = hideSiteBottomNavScript();
+const HIDE_SITE_NAV_JS = siteInjectedScript();
 
 interface Props {
   path: string;        // e.g. '/', '/gethelp'

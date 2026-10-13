@@ -24,6 +24,7 @@
     "signOutButtonText": "Sign Out",
     "hideSiteBottomNavMarkers": ["mentors", "jobs"],
     "contactEmail": "contact@ritanyasanstha.org",
+    "headerTitleFontPx": 14,
     "allowedDomains": [
       "aiimsdelhi.ritanyasanstha.in",
       "ritanyasanstha.in"
