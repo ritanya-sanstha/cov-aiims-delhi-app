@@ -43,13 +43,16 @@ jobs:
           REGISTER_FILE: ./registers/aiims-delhi.register.json
           ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
 
-      - name: Patch MainApplication.kt
+      - name: Patch MainApplication.kt (sed only)
         run: |
           MAIN_KT="android/app/src/main/java/in/ritanyasanstha/aiimsdelhi/MainApplication.kt"
-          PKG="in.ritanyasanstha.aiimsdelhi"
-          python3 scripts/patch-main-application.py "$MAIN_KT" "$PKG"
+          echo "--- MainApplication.kt before patch ---"
+          cat "$MAIN_KT"
+          sed -i 's/getUseDeveloperSupport(): Boolean = BuildConfig.DEBUG/getUseDeveloperSupport(): Boolean = false/' "$MAIN_KT"
+          sed -i 's/getUseDeveloperSupport(): Boolean = true/getUseDeveloperSupport(): Boolean = false/' "$MAIN_KT"
           echo "--- MainApplication.kt after patch ---"
           cat "$MAIN_KT"
+          grep "getUseDeveloperSupport" "$MAIN_KT" || echo "WARNING: getUseDeveloperSupport not found"
 
       - name: Patch gradle.properties
         run: |
@@ -70,7 +73,7 @@ jobs:
         run: |
           cd android
           chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon 2>&1 | tail -50
+          ./gradlew assembleDebug --no-daemon --stacktrace
         env:
           ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
 
