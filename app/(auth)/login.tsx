@@ -14,12 +14,14 @@
 import { useRef, useState } from 'react';
 import { StyleSheet, View, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import WebView, { WebViewNavigation } from 'react-native-webview';
 import { REGISTER, siteUrl, isAllowedUrl } from '../../src/config';
 import { setLandingUrl } from '../../src/session';
 
 export default function LoginScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const webViewRef = useRef<WebView>(null);
   const [loading, setLoading] = useState(true);
 
@@ -50,7 +52,7 @@ export default function LoginScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top, backgroundColor: primary }]}>
       {loading && (
         <View style={[styles.loader, { backgroundColor: primary }]}>
           <ActivityIndicator size="large" color={accent} />
@@ -87,6 +89,7 @@ const styles = StyleSheet.create({
   },
   webview: {
     flex: 1,
+    backgroundColor: '#FFFFFF',
   },
   loader: {
     ...StyleSheet.absoluteFillObject,
