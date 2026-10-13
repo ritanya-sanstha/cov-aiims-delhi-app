@@ -9,7 +9,10 @@ export interface TabConfig {
   id: string;
   label: string;
   icon: string;
-  path: string;
+  /** Website page this tab loads. Omit for native tabs. */
+  path?: string;
+  /** True when the tab is a native screen, not a WebView */
+  native?: boolean;
 }
 
 export interface InstituteRegister {
@@ -67,7 +70,7 @@ export const REGISTER: InstituteRegister =
         { id: 'helpline', label: 'Helpline', icon: 'heart', path: '/gethelp' },
         { id: 'directory', label: 'Directory', icon: 'people', path: '/alumni' },
         { id: 'jobs', label: 'Jobs', icon: 'briefcase', path: '/jobs' },
-        { id: 'more', label: 'More', icon: 'grid', path: '/more' },
+        { id: 'more', label: 'More', icon: 'grid', native: true },
       ],
     },
     standard: { ritanyaTreeLogo: true, tagline1: 'One Family — Every Stage of Life', tagline2: 'Help Others Celebrate Life', memberIdPrefix: 'AB', memberIdInstCode: 'AD', poweredBy: 'Ritanya Sanstha' },
@@ -76,7 +79,7 @@ export const REGISTER: InstituteRegister =
 /** Website path for a tab, from the register (never hardcode paths in screens) */
 export function tabPath(id: string): string {
   const tab = REGISTER.navigation.tabs.find((t) => t.id === id);
-  if (!tab) throw new Error(`No tab "${id}" in register.navigation.tabs`);
+  if (!tab?.path) throw new Error(`Tab "${id}" has no website path in register.navigation.tabs`);
   return tab.path;
 }
 

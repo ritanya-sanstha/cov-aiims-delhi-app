@@ -41,6 +41,10 @@ export default function RootLayout() {
   }, [authState, segments, navState?.key]);
 
   async function checkAuthState() {
+    // Don't let a slow server hold the launch screen: after 5s give up and
+    // show the login WebView, which handles everything itself.
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 5000);
     try {
       // Ping the dashboard — the server will redirect to /login if not authed
       const res = await fetch(siteUrl('/dashboard'), {
@@ -48,14 +52,17 @@ export default function RootLayout() {
         redirect: 'follow',
         credentials: 'include',
         headers: { 'Accept': 'text/html' },
+        signal: controller.signal,
       });
       const finalUrl = res.url ?? '';
       const isLogin = finalUrl.includes(REGISTER.website.loginPath);
       // A 404/5xx (e.g. page not deployed) must not count as "logged in".
       setAuthState(res.ok && !isLogin ? 'loggedIn' : 'loggedOut');
     } catch {
-      // Network error → let the login WebView handle it
+      // Network error or timeout → let the login WebView handle it
       setAuthState('loggedOut');
+    } finally {
+      clearTimeout(timer);
     }
   }
 
