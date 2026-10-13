@@ -19,6 +19,9 @@ import WebView, { WebViewNavigation } from 'react-native-webview';
 import { REGISTER, siteUrl, isAllowedUrl } from '../../src/config';
 import { setLandingUrl } from '../../src/session';
 
+// Extra space (dp) between the status bar and the website's login page.
+const LOGIN_TOP_GAP = 28;
+
 export default function LoginScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -52,7 +55,7 @@ export default function LoginScreen() {
   }
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top, backgroundColor: primary }]}>
+    <View style={[styles.container, { paddingTop: insets.top + LOGIN_TOP_GAP, backgroundColor: primary }]}>
       {loading && (
         <View style={[styles.loader, { backgroundColor: primary }]}>
           <ActivityIndicator size="large" color={accent} />
