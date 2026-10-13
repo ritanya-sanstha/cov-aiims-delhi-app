@@ -22,6 +22,7 @@
     "authCheckPath": "/profile",
     "profilePath": "/profile",
     "signOutButtonText": "Sign Out",
+    "hideSiteBottomNavMarkers": ["mentors", "jobs"],
     "allowedDomains": [
       "aiimsdelhi.ritanyasanstha.in",
       "ritanyasanstha.in"
