@@ -25,6 +25,7 @@
     "hideSiteBottomNavMarkers": ["mentors", "jobs"],
     "contactEmail": "contact@ritanyasanstha.org",
     "headerTitleFontPx": 14,
+    "hideSiteFooter": true,
     "allowedDomains": [
       "aiimsdelhi.ritanyasanstha.in",
       "ritanyasanstha.in"

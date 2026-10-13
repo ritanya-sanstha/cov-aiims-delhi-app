@@ -9,7 +9,7 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import WebView, { WebViewNavigation } from 'react-native-webview';
 import { REGISTER, siteUrl, isAllowedUrl } from '../config';
-import { siteInjectedScript } from '../siteScripts';
+import { handleSiteMessage, siteInjectedScript } from '../siteScripts';
 
 const HIDE_SITE_NAV_JS = siteInjectedScript();
 
@@ -52,7 +52,9 @@ export default function InAppPage({ path, title }: { path: string; title?: strin
         onNavigationStateChange={(n: WebViewNavigation) => { canGoBack.current = n.canGoBack; }}
         source={{ uri: siteUrl(path || '/') }}
         style={styles.webview}
+        injectedJavaScriptBeforeContentLoaded={HIDE_SITE_NAV_JS}
         injectedJavaScript={HIDE_SITE_NAV_JS}
+        onMessage={(e) => handleSiteMessage(e.nativeEvent.data)}
         onShouldStartLoadWithRequest={(r) => isAllowedUrl(r.url)}
         sharedCookiesEnabled
         thirdPartyCookiesEnabled

@@ -38,7 +38,7 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { REGISTER, siteUrl, isAllowedUrl } from '../config';
-import { siteInjectedScript } from '../siteScripts';
+import { handleSiteMessage, siteInjectedScript } from '../siteScripts';
 
 const HIDE_SITE_NAV_JS = siteInjectedScript();
 
@@ -141,7 +141,9 @@ export default function SiteWebView({ path }: Props) {
         ref={webViewRef}
         source={{ uri: url }}
         style={styles.webview}
+        injectedJavaScriptBeforeContentLoaded={HIDE_SITE_NAV_JS}
         injectedJavaScript={HIDE_SITE_NAV_JS}
+        onMessage={(e) => handleSiteMessage(e.nativeEvent.data)}
         onNavigationStateChange={handleNavigationStateChange}
         onShouldStartLoadWithRequest={handleShouldStartLoadWithRequest}
         onError={handleError}

@@ -12,13 +12,14 @@
  *    is the institute name, inside a fixed/sticky header; it gets nowrap, a
  *    smaller font and an ellipsis (REGISTER.website.headerTitleFontPx, 0 = off).
  */
+import { Alert } from 'react-native';
 import { REGISTER } from './config';
 
 export function siteInjectedScript(): string {
   const markers = (REGISTER.website.hideSiteBottomNavMarkers ?? []).map((m) => m.toLowerCase());
   const brand = REGISTER.institute.name.replace(/\s+/g, ' ').trim().toLowerCase();
   const fontPx = REGISTER.website.headerTitleFontPx ?? 14;
-  if (markers.length === 0 && !fontPx) return 'true;';
+  const hideFooter = REGISTER.website.hideSiteFooter ?? false;
   return `
 (function () {
   if (window.__siteTweaks) return;
@@ -26,6 +27,7 @@ export function siteInjectedScript(): string {
   var markers = ${JSON.stringify(markers)};
   var brand = ${JSON.stringify(brand)};
   var fontPx = ${JSON.stringify(fontPx)};
+  var hideFooter = ${JSON.stringify(hideFooter)};
 
   function isFixedOrSticky(el) {
     for (var n = el; n && n !== document.body; n = n.parentElement) {
@@ -76,14 +78,109 @@ export function siteInjectedScript(): string {
     }
   }
 
-  function run() { hideBottomBar(); compactHeaderTitle(); }
+  function post(o) {
+    try { if (window.ReactNativeWebView) window.ReactNativeWebView.postMessage(JSON.stringify(o)); } catch (e) {}
+  }
+
+  // --- upload diagnostics: wrap fetch / XHR for requests that send files ---
+  function isUploadBody(b) {
+    try { return !!b && ((typeof FormData !== 'undefined' && b instanceof FormData) || (typeof Blob !== 'undefined' && b instanceof Blob)); } catch (e) { return false; }
+  }
+  function pathOf(u) { try { return new URL(u, location.href).pathname; } catch (e) { return ''; } }
+  if (window.fetch && !window.__fetchWrapped) {
+    window.__fetchWrapped = true;
+    var origFetch = window.fetch;
+    window.fetch = function (input, init) {
+      var method = String((init && init.method) || (input && input.method) || 'GET').toUpperCase();
+      var up = method !== 'GET' && isUploadBody(init && init.body);
+      var p = origFetch.apply(this, arguments);
+      if (!up) return p;
+      var path = pathOf(typeof input === 'string' ? input : input && input.url);
+      return p.then(function (res) {
+        if (!res.ok) {
+          res.clone().text().then(function (t) { post({ kind: 'upload-error', status: res.status, path: path, detail: (t || '').slice(0, 160) }); })
+            .catch(function () { post({ kind: 'upload-error', status: res.status, path: path, detail: '' }); });
+        }
+        return res;
+      }, function (err) {
+        post({ kind: 'upload-error', status: 0, path: path, detail: String((err && err.message) || err) });
+        throw err;
+      });
+    };
+  }
+  if (window.XMLHttpRequest && !window.__xhrWrapped) {
+    window.__xhrWrapped = true;
+    var X = XMLHttpRequest.prototype, origOpen = X.open, origSend = X.send;
+    X.open = function (m, u) { this.__m = String(m || 'GET').toUpperCase(); this.__u = u; return origOpen.apply(this, arguments); };
+    X.send = function (b) {
+      var self = this;
+      if (this.__m !== 'GET' && isUploadBody(b)) {
+        this.addEventListener('loadend', function () {
+          if (self.status < 200 || self.status >= 300) {
+            var d = ''; try { d = (self.responseType === '' || self.responseType === 'text') ? String(self.responseText || '').slice(0, 160) : ''; } catch (e) {}
+            post({ kind: 'upload-error', status: self.status, path: pathOf(self.__u), detail: d });
+          }
+        });
+      }
+      return origSend.apply(this, arguments);
+    };
+  }
+
+  // --- app-feel clean-ups ---
+  function appFeel() {
+    if (!document.getElementById('__app_css')) {
+      var host = document.head || document.documentElement;
+      if (host) {
+        var st = document.createElement('style');
+        st.id = '__app_css';
+        st.textContent = 'html,body{overscroll-behavior-y:none}a,button,[role=button]{-webkit-tap-highlight-color:transparent}';
+        host.appendChild(st);
+      }
+    }
+    if (hideFooter) {
+      var fs = document.querySelectorAll('footer');
+      for (var i = 0; i < fs.length; i++) fs[i].style.setProperty('display', 'none', 'important');
+    }
+  }
+
+  function run() { hideBottomBar(); compactHeaderTitle(); appFeel(); }
   run();
   var timer = null;
   new MutationObserver(function () {
     if (timer) return;
     timer = setTimeout(function () { timer = null; run(); }, 300);
-  }).observe(document.documentElement, { childList: true, subtree: true });
+  }).observe(document, { childList: true, subtree: true });
 })();
 true;
 `;
+}
+
+let lastUploadAlert = 0;
+
+/** Plain-language reason for an HTTP status from the website's upload request. */
+function uploadReason(status: number): string {
+  if (status === 0) return 'The server could not be reached, or the request was blocked.';
+  if (status === 401 || status === 403) return 'The server refused it (not allowed, or the login session has expired). Sign out and in again, then retry.';
+  if (status === 404) return 'The upload address was not found on the server.';
+  if (status === 413) return 'The file is too large for the server. Try a smaller file.';
+  if (status === 415) return 'The server does not accept this file type.';
+  if (status === 429) return 'Too many requests. Wait a minute and retry.';
+  if (status >= 500) return 'The server had an error while saving the file.';
+  return 'The server rejected the file.';
+}
+
+/** onMessage handler for site WebViews: shows why an upload failed. */
+export function handleSiteMessage(data: string): void {
+  let msg: { kind?: string; status?: number; path?: string; detail?: string };
+  try { msg = JSON.parse(data); } catch { return; }
+  if (msg.kind !== 'upload-error') return;
+  const now = Date.now();
+  if (now - lastUploadAlert < 5000) return;
+  lastUploadAlert = now;
+  const status = msg.status ?? 0;
+  const detail = msg.detail ? `\n\nServer says: ${msg.detail}` : '';
+  Alert.alert(
+    'Upload failed',
+    `${uploadReason(status)}\n\nTechnical: ${status === 0 ? 'no response' : 'HTTP ' + status}${msg.path ? ' on ' + msg.path : ''}${detail}`,
+  );
 }
