@@ -19,6 +19,7 @@
     "baseUrl": "https://aiimsdelhi.ritanyasanstha.in",
     "loginPath": "/login",
     "homePath": "/dashboard",
+    "logoutPath": "/api/auth/signout",
     "allowedDomains": [
       "aiimsdelhi.ritanyasanstha.in",
       "ritanyasanstha.in"
