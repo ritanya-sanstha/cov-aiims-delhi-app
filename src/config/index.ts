@@ -64,14 +64,21 @@ export const REGISTER: InstituteRegister =
     navigation: {
       tabs: [
         { id: 'home', label: 'Home', icon: 'home', path: '/dashboard' },
-        { id: 'helpline', label: 'Helpline', icon: 'heart', path: '/helpline' },
-        { id: 'directory', label: 'Directory', icon: 'people', path: '/directory' },
+        { id: 'helpline', label: 'Helpline', icon: 'heart', path: '/gethelp' },
+        { id: 'directory', label: 'Directory', icon: 'people', path: '/alumni' },
         { id: 'jobs', label: 'Jobs', icon: 'briefcase', path: '/jobs' },
         { id: 'more', label: 'More', icon: 'grid', path: '/more' },
       ],
     },
     standard: { ritanyaTreeLogo: true, tagline1: 'One Family — Every Stage of Life', tagline2: 'Help Others Celebrate Life', memberIdPrefix: 'AB', memberIdInstCode: 'AD', poweredBy: 'Ritanya Sanstha' },
   };
+
+/** Website path for a tab, from the register (never hardcode paths in screens) */
+export function tabPath(id: string): string {
+  const tab = REGISTER.navigation.tabs.find((t) => t.id === id);
+  if (!tab) throw new Error(`No tab "${id}" in register.navigation.tabs`);
+  return tab.path;
+}
 
 /** Full URL for a website path */
 export function siteUrl(path: string): string {
