@@ -47,7 +47,10 @@ interface Props {
 export default function SiteWebView({ path }: Props) {
   const router = useRouter();
   const webViewRef = useRef<WebView>(null);
-  const [loading, setLoading] = useState(true);
+  // Full-screen spinner only for the very first load; later navigations show
+  // a thin progress bar so the page stays visible and taps feel instant.
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [progress, setProgress] = useState(0);
   const [error, setError] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const url = siteUrl(path);
@@ -86,7 +89,7 @@ export default function SiteWebView({ path }: Props) {
 
   function handleError(_e: WebViewErrorEvent) {
     setError(true);
-    setLoading(false);
+    setInitialLoading(false);
   }
 
   function handleRefresh() {
@@ -114,10 +117,13 @@ export default function SiteWebView({ path }: Props) {
 
   return (
     <View style={styles.container}>
-      {loading && (
+      {initialLoading && (
         <View style={[styles.loader, { backgroundColor: primary }]}>
           <ActivityIndicator size="large" color={accent} />
         </View>
+      )}
+      {!initialLoading && progress > 0 && progress < 1 && (
+        <View pointerEvents="none" style={[styles.progress, { width: `${progress * 100}%`, backgroundColor: accent }]} />
       )}
       <WebView
         ref={webViewRef}
@@ -126,8 +132,8 @@ export default function SiteWebView({ path }: Props) {
         onNavigationStateChange={handleNavigationStateChange}
         onShouldStartLoadWithRequest={handleShouldStartLoadWithRequest}
         onError={handleError}
-        onLoadEnd={() => setLoading(false)}
-        onLoadStart={() => setLoading(true)}
+        onLoadProgress={({ nativeEvent }) => setProgress(nativeEvent.progress)}
+        onLoadEnd={() => { setInitialLoading(false); setProgress(0); }}
         // Cookie sharing — critical for twin-login
         sharedCookiesEnabled
         thirdPartyCookiesEnabled
@@ -150,6 +156,7 @@ export default function SiteWebView({ path }: Props) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F0F2F5' },
   webview:   { flex: 1 },
+  progress: { position: 'absolute', top: 0, left: 0, height: 3, zIndex: 11 },
   loader: {
     ...StyleSheet.absoluteFillObject,
     justifyContent: 'center',

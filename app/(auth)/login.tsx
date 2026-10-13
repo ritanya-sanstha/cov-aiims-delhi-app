@@ -63,7 +63,6 @@ export default function LoginScreen() {
         onNavigationStateChange={handleNavigationStateChange}
         onShouldStartLoadWithRequest={handleShouldStartLoadWithRequest}
         onLoadEnd={() => setLoading(false)}
-        onLoadStart={() => setLoading(true)}
         // Security hardening
         allowsInlineMediaPlayback
         javaScriptEnabled
