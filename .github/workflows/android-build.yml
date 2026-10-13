@@ -37,22 +37,33 @@ jobs:
       - name: Run fix-screens script
         run: node scripts/fix-screens.js || true
 
+      - name: Use Hermes engine
+        run: sed -i "s/'jsc'/'hermes'/" app.config.js
+
       - name: Expo Prebuild
         run: npx expo prebuild --platform android --clean --no-install
         env:
           REGISTER_FILE: ./registers/aiims-delhi.register.json
           ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
 
-      - name: Patch MainApplication.kt (sed only)
+      - name: Pin react-android and hermes-android versions (Gradle 9.x BOM workaround)
         run: |
-          MAIN_KT="android/app/src/main/java/in/ritanyasanstha/aiimsdelhi/MainApplication.kt"
-          echo "--- MainApplication.kt before patch ---"
+          sed -i 's/implementation("com.facebook.react:react-android")/implementation("com.facebook.react:react-android:0.79.0")/g' android/app/build.gradle
+          sed -i 's/implementation("com.facebook.react:hermes-android")/implementation("com.facebook.react:hermes-android:0.79.0")/g' android/app/build.gradle
+          grep -E "react-android|hermes-android" android/app/build.gradle || echo "WARNING: not found!"
+
+      - name: Patch MainApplication.kt for RN 0.79 (Expo SDK 57 template uses newer APIs)
+        run: |
+          MAIN_KT=$(find android/app/src/main -name "MainApplication.kt" | head -1)
+          echo "=== ORIGINAL MainApplication.kt ==="
           cat "$MAIN_KT"
-          sed -i 's/getUseDeveloperSupport(): Boolean = BuildConfig.DEBUG/getUseDeveloperSupport(): Boolean = false/' "$MAIN_KT"
-          sed -i 's/getUseDeveloperSupport(): Boolean = true/getUseDeveloperSupport(): Boolean = false/' "$MAIN_KT"
-          echo "--- MainApplication.kt after patch ---"
+          # Keep the package line exactly as Expo wrote it: `in` is a Kotlin
+          # keyword, so the generated file has it backtick-escaped.
+          PKG=$(grep "^package " "$MAIN_KT" | sed 's/^package //')
+          echo "Package: [$PKG]"
+          python3 scripts/patch-main-application.py "$MAIN_KT" "$PKG"
+          echo "=== PATCHED MainApplication.kt ==="
           cat "$MAIN_KT"
-          grep "getUseDeveloperSupport" "$MAIN_KT" || echo "WARNING: getUseDeveloperSupport not found"
 
       - name: Patch gradle.properties
         run: |
@@ -68,6 +79,17 @@ jobs:
           fi
           echo "--- gradle.properties after patch ---"
           cat android/gradle.properties
+
+      - name: Patch expo-modules-core NativeStatePropsGetter.cpp for RN 0.79 API change
+        run: |
+          python3 - <<'PYEOF'
+          f = 'node_modules/expo-modules-core/android/src/main/cpp/fabric/NativeStatePropsGetter.cpp'
+          c = open(f).read()
+          old = 'state->updateState(std::move(newState), react::EventQueue::UpdateMode::unstable_Immediate);'
+          n = c.count(old)
+          open(f, 'w').write(c.replace(old, 'state->updateState(std::move(newState));'))
+          print(str(n) + ' occurrence(s) patched')
+          PYEOF
 
       - name: Build debug APK
         run: |
