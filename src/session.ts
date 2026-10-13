@@ -24,3 +24,22 @@ export function getHomePath(defaultPath: string): string {
     return defaultPath;
   }
 }
+
+// --- the website header said the member is an admin (it has an Admin Panel link) ---
+let siteAdmin = false;
+const adminListeners = new Set<(v: boolean) => void>();
+
+export function setSiteAdmin(v: boolean): void {
+  if (v === siteAdmin) return;
+  siteAdmin = v;
+  adminListeners.forEach((f) => f(v));
+}
+
+export function getSiteAdmin(): boolean {
+  return siteAdmin;
+}
+
+export function subscribeSiteAdmin(f: (v: boolean) => void): () => void {
+  adminListeners.add(f);
+  return () => { adminListeners.delete(f); };
+}

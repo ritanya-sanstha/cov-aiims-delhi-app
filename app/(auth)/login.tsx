@@ -16,6 +16,7 @@ import { StyleSheet, View, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import WebView, { WebViewNavigation } from 'react-native-webview';
+import { appUserAgent } from '../../src/siteScripts';
 import { REGISTER, siteUrl, isAllowedUrl } from '../../src/config';
 import { setLandingUrl } from '../../src/session';
 
@@ -64,6 +65,7 @@ export default function LoginScreen() {
       <WebView
         ref={webViewRef}
         source={{ uri: loginUrl }}
+        applicationNameForUserAgent={appUserAgent()}
         style={styles.webview}
         onNavigationStateChange={handleNavigationStateChange}
         onShouldStartLoadWithRequest={handleShouldStartLoadWithRequest}

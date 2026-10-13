@@ -11,15 +11,31 @@
  *    covers the top of the page. The title element is the one whose whole text
  *    is the institute name, inside a fixed/sticky header; it gets nowrap, a
  *    smaller font and an ellipsis (REGISTER.website.headerTitleFontPx, 0 = off).
+ * 3. With `nativeHeader` the website's floating header is hidden (the app shows
+ *    its own top bar) except on REGISTER.website.keepSiteHeaderPaths, and the
+ *    gap it leaves at the top of the page is trimmed. The header is found by
+ *    behaviour: fixed/sticky, at the top, full width, containing the institute name.
+ * 4. The page is told it is inside the app: <html data-app="android" class="in-app">
+ *    and window.__IN_APP (the user agent carries the same token, see appUserAgent()).
  */
 import { Alert } from 'react-native';
+import Constants from 'expo-constants';
 import { REGISTER } from './config';
+import { setSiteAdmin } from './session';
+
+/** Token appended to the WebView user agent: "COVApp/1.0.0". */
+export function appUserAgent(): string {
+  const token = REGISTER.website.appUserAgentToken ?? 'App';
+  return `${token}/${Constants.expoConfig?.version ?? '1.0.0'}`;
+}
 
 export function siteInjectedScript(): string {
   const markers = (REGISTER.website.hideSiteBottomNavMarkers ?? []).map((m) => m.toLowerCase());
   const brand = REGISTER.institute.name.replace(/\s+/g, ' ').trim().toLowerCase();
   const fontPx = REGISTER.website.headerTitleFontPx ?? 14;
   const hideFooter = REGISTER.website.hideSiteFooter ?? false;
+  const nativeHeader = REGISTER.website.nativeHeader ?? false;
+  const keepPaths = REGISTER.website.keepSiteHeaderPaths ?? [];
   return `
 (function () {
   if (window.__siteTweaks) return;
@@ -28,6 +44,18 @@ export function siteInjectedScript(): string {
   var brand = ${JSON.stringify(brand)};
   var fontPx = ${JSON.stringify(fontPx)};
   var hideFooter = ${JSON.stringify(hideFooter)};
+  var nativeHeader = ${JSON.stringify(nativeHeader)};
+  var keepPaths = ${JSON.stringify(keepPaths)};
+
+  // --- tell the page it is inside the app ---
+  window.__IN_APP = true;
+  function markApp() {
+    var root = document.documentElement; // null this early on some loads: retried from run()
+    if (root && root.getAttribute('data-app') !== 'android') {
+      root.setAttribute('data-app', 'android');
+      root.classList.add('in-app');
+    }
+  }
 
   function isFixedOrSticky(el) {
     for (var n = el; n && n !== document.body; n = n.parentElement) {
@@ -59,7 +87,7 @@ export function siteInjectedScript(): string {
     for (var i = 0; i < cands.length; i++) {
       var el = cands[i];
       if (el.__titleDone || el.children.length > 0) continue;
-      var t = (el.textContent || '').replace(/\s+/g, ' ').trim().toLowerCase();
+      var t = (el.textContent || '').replace(/\\s+/g, ' ').trim().toLowerCase();
       if (t !== brand) continue;
       var r = el.getBoundingClientRect();
       if (r.height === 0 || r.top > 200 || !isFixedOrSticky(el)) continue;
@@ -76,6 +104,84 @@ export function siteInjectedScript(): string {
         n.style.setProperty('min-width', '0', 'important');
       }
     }
+  }
+
+  // --- native header: hide the website's floating header, trim the gap ---
+  var hdr = null, trimPath = null, trims = 0, lastTrim = 0, adminPosted = false;
+  function headerKept() {
+    var p = location.pathname;
+    for (var i = 0; i < keepPaths.length; i++) {
+      if (p === keepPaths[i] || p.indexOf(keepPaths[i] + '/') === 0) return true;
+    }
+    return false;
+  }
+  function findHeader() {
+    var els = document.querySelectorAll('nav,header,.fixed,.sticky');
+    for (var i = 0; i < els.length; i++) {
+      var el = els[i];
+      var pos = getComputedStyle(el).position;
+      if (pos !== 'fixed' && pos !== 'sticky') continue;
+      var r = el.getBoundingClientRect();
+      if (r.height === 0 || r.top > 60 || r.bottom > 220 || r.width < window.innerWidth * 0.8) continue;
+      if ((el.textContent || '').replace(/\\s+/g, ' ').toLowerCase().indexOf(brand) < 0) continue;
+      return el;
+    }
+    return null;
+  }
+  // Page-top (px) of the first visible content that is not part of a fixed/sticky bar.
+  function firstContentTop() {
+    var fixedList = [], best = Infinity;
+    var all = document.body ? document.body.querySelectorAll('*') : [];
+    for (var i = 0; i < all.length; i++) {
+      var el = all[i], tag = el.tagName;
+      if (tag === 'SCRIPT' || tag === 'STYLE' || tag === 'NOSCRIPT') continue;
+      var pos = getComputedStyle(el).position;
+      if (pos === 'fixed' || pos === 'sticky') { fixedList.push(el); continue; }
+      var inFixed = false;
+      for (var f = 0; f < fixedList.length; f++) { if (fixedList[f].contains(el)) { inFixed = true; break; } }
+      if (inFixed) continue;
+      var own = false;
+      for (var c = el.firstChild; c; c = c.nextSibling) { if (c.nodeType === 3 && c.nodeValue.trim()) { own = true; break; } }
+      if (!own && !/^(IMG|svg|VIDEO|CANVAS|INPUT|BUTTON|TEXTAREA|SELECT)$/i.test(tag)) continue;
+      var r = el.getBoundingClientRect();
+      if (r.width === 0 || r.height === 0) continue;
+      var top = r.top + window.pageYOffset;
+      if (top < best) best = top;
+    }
+    return best;
+  }
+  // The hidden header leaves its reserved space empty: pull the page up (a few
+  // tries per page, content renders after load).
+  function trimTop() {
+    var path = location.pathname;
+    if (trimPath !== path) { trimPath = path; trims = 0; }
+    var now = Date.now();
+    if (trims >= 4 || now - lastTrim < 500 || !document.body) return;
+    trims++; lastTrim = now;
+    var b = document.body.style;
+    b.setProperty('margin-top', '0px', 'important');
+    var top = firstContentTop();
+    var shift = top - 12;
+    if (isFinite(top) && shift > 0) b.setProperty('margin-top', (-shift) + 'px', 'important');
+  }
+  function nativeHeaderRun() {
+    if (!nativeHeader) return;
+    if (headerKept()) {
+      if (hdr) { hdr.style.removeProperty('display'); hdr = null; }
+      if (document.body) document.body.style.removeProperty('margin-top');
+      trimPath = null;
+      return;
+    }
+    if (!hdr || !document.contains(hdr)) {
+      hdr = findHeader();
+      if (!hdr) return;
+      if (!adminPosted) {
+        adminPosted = true;
+        post({ kind: 'chrome', admin: !!hdr.querySelector('a[href*="/admin"]') });
+      }
+    }
+    if (hdr.style.getPropertyValue('display') !== 'none') hdr.style.setProperty('display', 'none', 'important');
+    trimTop();
   }
 
   function post(o) {
@@ -143,7 +249,7 @@ export function siteInjectedScript(): string {
     }
   }
 
-  function run() { hideBottomBar(); compactHeaderTitle(); appFeel(); }
+  function run() { markApp(); hideBottomBar(); nativeHeaderRun(); compactHeaderTitle(); appFeel(); }
   run();
   var timer = null;
   new MutationObserver(function () {
@@ -171,8 +277,9 @@ function uploadReason(status: number): string {
 
 /** onMessage handler for site WebViews: shows why an upload failed. */
 export function handleSiteMessage(data: string): void {
-  let msg: { kind?: string; status?: number; path?: string; detail?: string };
+  let msg: { kind?: string; status?: number; path?: string; detail?: string; admin?: boolean };
   try { msg = JSON.parse(data); } catch { return; }
+  if (msg.kind === 'chrome') { setSiteAdmin(!!msg.admin); return; }
   if (msg.kind !== 'upload-error') return;
   const now = Date.now();
   if (now - lastUploadAlert < 5000) return;

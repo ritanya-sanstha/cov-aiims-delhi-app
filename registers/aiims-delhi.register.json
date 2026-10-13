@@ -26,6 +26,9 @@
     "contactEmail": "contact@ritanyasanstha.org",
     "headerTitleFontPx": 14,
     "hideSiteFooter": true,
+    "nativeHeader": true,
+    "keepSiteHeaderPaths": ["/admin"],
+    "appUserAgentToken": "COVApp",
     "allowedDomains": [
       "aiimsdelhi.ritanyasanstha.in",
       "ritanyasanstha.in"

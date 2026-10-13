@@ -15,6 +15,7 @@ import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import WebView, { WebViewMessageEvent, WebViewNavigation } from 'react-native-webview';
+import { appUserAgent } from '../src/siteScripts';
 import { REGISTER, siteUrl, isAllowedUrl } from '../src/config';
 import { clearLandingUrl } from '../src/session';
 
@@ -96,6 +97,7 @@ export default function SignOutScreen() {
       {!!hint && <Text style={styles.hint}>{hint}</Text>}
       <WebView
         source={{ uri: siteUrl(profilePath) }}
+        applicationNameForUserAgent={appUserAgent()}
         style={styles.webview}
         injectedJavaScript={PRESS_SIGN_OUT_JS}
         onMessage={handleMessage}
