@@ -35,11 +35,12 @@ import {
 import WebView, { WebViewNavigation } from 'react-native-webview';
 import type { WebViewErrorEvent } from 'react-native-webview/lib/WebViewTypes';
 import { useFocusEffect, useRouter } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { REGISTER, siteUrl, isAllowedUrl } from '../config';
 import { appUserAgent, handleSiteMessage, siteInjectedScript } from '../siteScripts';
-import AppBar from './AppBar';
+import AppBar, { APP_BG } from './AppBar';
 
 const HIDE_SITE_NAV_JS = siteInjectedScript();
 
@@ -53,6 +54,8 @@ interface Props {
 
 export default function SiteWebView({ path, title }: Props) {
   const router = useRouter();
+  const [focused, setFocused] = useState(false);
+  useFocusEffect(useCallback(() => { setFocused(true); return () => setFocused(false); }, []));
   const insets = useSafeAreaInsets();
   const webViewRef = useRef<WebView>(null);
   const canGoBack = useRef(false);
@@ -132,7 +135,8 @@ export default function SiteWebView({ path, title }: Props) {
   }
 
   return (
-    <View style={[styles.container, { paddingTop: nativeBar ? 0 : insets.top, backgroundColor: nativeBar ? '#FFFFFF' : primary }]}>
+    <View style={[styles.container, { paddingTop: nativeBar ? 0 : insets.top, backgroundColor: nativeBar ? APP_BG : primary }]}>
+      {nativeBar && focused && <StatusBar style="dark" />}
       {nativeBar && <AppBar title={title!} />}
       {initialLoading && (
         <View style={[styles.loader, { backgroundColor: primary }]}>

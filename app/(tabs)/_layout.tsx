@@ -13,6 +13,7 @@
  *   more      → /more
  */
 import { Tabs } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { REGISTER } from '../../src/config';
 
@@ -32,23 +33,35 @@ const primary  = REGISTER.branding.primaryColor;  // '#1B2B5E'
 const inactive = '#9CA3AF';
 
 export default function TabsLayout() {
+  const insets = useSafeAreaInsets();
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: primary,
         tabBarInactiveTintColor: inactive,
+        // floating rounded bar, like the website's own bottom bar
         tabBarStyle: {
-          borderTopWidth: 1,
-          borderTopColor: '#E5E7EB',
-          paddingBottom: 6,
-          paddingTop: 4,
-          height: 60,
+          position: 'relative',
+          marginHorizontal: 12,
+          marginBottom: insets.bottom + 8,
+          borderRadius: 22,
+          borderTopWidth: 0,
+          height: 64,
+          paddingBottom: 8,
+          paddingTop: 6,
           backgroundColor: '#FFFFFF',
+          elevation: 8,
+          shadowColor: '#000',
+          shadowOpacity: 0.1,
+          shadowRadius: 12,
+          shadowOffset: { width: 0, height: 4 },
         },
         tabBarLabelStyle: {
-          fontSize: 11,
-          fontWeight: '500',
+          fontSize: 10,
+          fontWeight: '700',
+          letterSpacing: 0.6,
+          textTransform: 'uppercase',
         },
       }}
     >
