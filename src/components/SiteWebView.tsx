@@ -38,17 +38,20 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { REGISTER, siteUrl, isAllowedUrl } from '../config';
-import { hideSiteBottomNavScript } from '../siteScripts';
+import { appUserAgent, handleSiteMessage, siteInjectedScript } from '../siteScripts';
+import AppBar from './AppBar';
 
-const HIDE_SITE_NAV_JS = hideSiteBottomNavScript();
+const HIDE_SITE_NAV_JS = siteInjectedScript();
 
 interface Props {
   path: string;        // e.g. '/', '/gethelp'
+  /** Screen title for the app's own top bar (shown when website.nativeHeader is on) */
+  title?: string;
   /** Optional: scroll-up when tab is tapped again (default true) */
   scrollToTopOnFocus?: boolean;
 }
 
-export default function SiteWebView({ path }: Props) {
+export default function SiteWebView({ path, title }: Props) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const webViewRef = useRef<WebView>(null);
@@ -61,6 +64,7 @@ export default function SiteWebView({ path }: Props) {
   const [refreshing, setRefreshing] = useState(false);
   const url = siteUrl(path);
 
+  const nativeBar = !!title && (REGISTER.website.nativeHeader ?? false);
   const primary = REGISTER.branding.primaryColor;
   const accent  = REGISTER.branding.accentColor;
 
@@ -128,7 +132,8 @@ export default function SiteWebView({ path }: Props) {
   }
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top, backgroundColor: primary }]}>
+    <View style={[styles.container, { paddingTop: nativeBar ? 0 : insets.top, backgroundColor: nativeBar ? '#FFFFFF' : primary }]}>
+      {nativeBar && <AppBar title={title!} />}
       {initialLoading && (
         <View style={[styles.loader, { backgroundColor: primary }]}>
           <ActivityIndicator size="large" color={accent} />
@@ -140,8 +145,11 @@ export default function SiteWebView({ path }: Props) {
       <WebView
         ref={webViewRef}
         source={{ uri: url }}
+        applicationNameForUserAgent={appUserAgent()}
         style={styles.webview}
+        injectedJavaScriptBeforeContentLoaded={HIDE_SITE_NAV_JS}
         injectedJavaScript={HIDE_SITE_NAV_JS}
+        onMessage={(e) => handleSiteMessage(e.nativeEvent.data)}
         onNavigationStateChange={handleNavigationStateChange}
         onShouldStartLoadWithRequest={handleShouldStartLoadWithRequest}
         onError={handleError}
@@ -152,6 +160,8 @@ export default function SiteWebView({ path }: Props) {
         thirdPartyCookiesEnabled
         // Security
         originWhitelist={REGISTER.website.allowedDomains.map(d => `https://${d}`)}
+        // target=_blank / window.open load in this view; without this they were dropped
+        setSupportMultipleWindows={false}
         allowFileAccess={false}
         allowUniversalAccessFromFileURLs={false}
         mixedContentMode="never"

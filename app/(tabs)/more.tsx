@@ -49,6 +49,13 @@ export default function MoreScreen() {
       </View>
 
       <View style={styles.card}>
+        {!!website.contactEmail && (
+          <Row
+            icon="mail-outline"
+            label="Contact us"
+            onPress={() => { Linking.openURL(`mailto:${website.contactEmail}`).catch(() => {}); }}
+          />
+        )}
         <Row icon="globe-outline" label="Open website in browser" onPress={open('/')} />
         <Row icon="log-in-outline" label="Open login page in browser" onPress={open(website.loginPath)} />
         <Row icon="log-out-outline" label="Sign out" external={false} onPress={() => router.push('/signout')} />

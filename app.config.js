@@ -42,6 +42,17 @@ module.exports = {
         backgroundColor: register.branding.splashBg,
       },
       permissions: ['INTERNET'],
+      // Open the website's own links (e.g. a shared lesson link) in the app.
+      // autoVerify needs https://<host>/.well-known/assetlinks.json on the
+      // website; see README / PR notes. Without it Android asks or uses Chrome.
+      intentFilters: [
+        {
+          action: 'VIEW',
+          autoVerify: true,
+          data: [{ scheme: 'https', host: new URL(register.website.baseUrl).host }],
+          category: ['BROWSABLE', 'DEFAULT'],
+        },
+      ],
     },
 
     plugins: [
