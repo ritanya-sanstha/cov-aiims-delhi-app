@@ -16,6 +16,7 @@ import { StyleSheet, View, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import WebView, { WebViewNavigation } from 'react-native-webview';
 import { REGISTER, siteUrl, isAllowedUrl } from '../../src/config';
+import { setLandingUrl } from '../../src/session';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -33,6 +34,8 @@ export default function LoginScreen() {
     // Successful login: website redirects away from /login
     const isOnLoginPage = url.includes(REGISTER.website.loginPath);
     if (!isOnLoginPage && isAllowedUrl(url)) {
+      // Remember where the website sent us: the Home tab shows this page
+      setLandingUrl(url);
       // Small delay to let the cookie settle
       setTimeout(() => router.replace('/(tabs)/home'), 100);
     }
