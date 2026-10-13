@@ -11,7 +11,7 @@ import 'react-native-gesture-handler';
  * cookie jar.  All subsequent WebViews in the app share that cookie automatically.
  */
 import { useEffect, useState } from 'react';
-import { Stack, useRouter, useSegments } from 'expo-router';
+import { Stack, useRouter, useSegments, useRootNavigationState } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { View, ActivityIndicator } from 'react-native';
 import { REGISTER, siteUrl } from '../src/config';
@@ -22,21 +22,23 @@ export default function RootLayout() {
   const [authState, setAuthState] = useState<AuthState>('loading');
   const router = useRouter();
   const segments = useSegments();
+  const navState = useRootNavigationState();
 
   useEffect(() => {
     checkAuthState();
   }, []);
 
+  // Initial redirect only: from the launch route ("/") into (auth) or (tabs).
+  // Wait for the navigator to be ready, otherwise router.replace is ignored.
+  // After that, the login screen navigates to the tabs itself.
   useEffect(() => {
-    if (authState === 'loading') return;
+    if (authState === 'loading' || !navState?.key) return;
 
-    const inAuth = segments[0] === '(auth)';
-    if (authState === 'loggedOut' && !inAuth) {
-      router.replace('/(auth)/login');
-    } else if (authState === 'loggedIn' && inAuth) {
-      router.replace('/(tabs)/home');
-    }
-  }, [authState, segments]);
+    const group = segments[0];
+    if (group === '(auth)' || group === '(tabs)') return;
+
+    router.replace(authState === 'loggedIn' ? '/(tabs)/home' : '/(auth)/login');
+  }, [authState, segments, navState?.key]);
 
   async function checkAuthState() {
     try {
