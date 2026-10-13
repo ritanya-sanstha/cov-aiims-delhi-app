@@ -39,7 +39,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { REGISTER, siteUrl, isAllowedUrl } from '../config';
 
 interface Props {
-  path: string;        // e.g. '/dashboard', '/helpline'
+  path: string;        // e.g. '/', '/gethelp'
   /** Optional: scroll-up when tab is tapped again (default true) */
   scrollToTopOnFocus?: boolean;
 }

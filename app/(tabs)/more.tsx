@@ -21,7 +21,7 @@ function Row({ icon, label, onPress, external = true }: { icon: IoniconName; lab
 }
 
 export default function MoreScreen() {
-  const { institute, standard, branding, website } = REGISTER;
+  const { institute, standard, branding, website, navigation } = REGISTER;
   const router = useRouter();
   const version = Constants.expoConfig?.version ?? '';
   const open = (path: string) => () => { Linking.openURL(siteUrl(path)).catch(() => {}); };
@@ -32,6 +32,18 @@ export default function MoreScreen() {
         <Text style={[styles.title, { color: branding.accentColor }]}>{institute.name}</Text>
         {!!institute.tagline && <Text style={styles.headerText}>{institute.tagline}</Text>}
         {!!institute.description && <Text style={styles.headerSub}>{institute.description}</Text>}
+      </View>
+
+      <View style={styles.card}>
+        {navigation.more.map((item) => (
+          <Row
+            key={item.path}
+            icon={item.icon as IoniconName}
+            label={item.label}
+            external={false}
+            onPress={() => router.push({ pathname: '/page', params: { path: item.path, title: item.label } })}
+          />
+        ))}
       </View>
 
       <View style={styles.card}>

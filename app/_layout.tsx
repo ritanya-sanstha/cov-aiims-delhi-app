@@ -3,9 +3,9 @@ import 'react-native-gesture-handler';
  * app/_layout.tsx  — Root layout (Expo Router)
  *
  * Auth detection strategy (WebView-centric):
- *   1. On mount, do a lightweight HEAD request to baseUrl/dashboard
- *   2. If response URL ended up at /login  → user is not logged in → show (auth) stack
- *   3. If response URL stayed at /dashboard → user is logged in  → show (tabs) stack
+ *   1. On mount, fetch REGISTER.website.authCheckPath (a member-only page)
+ *   2. If the response URL ended up at /login or is not OK → not logged in → (auth) stack
+ *   3. Otherwise → logged in → (tabs) stack
  *
  * After login, the website sets an HttpOnly session cookie in the system WebView
  * cookie jar.  All subsequent WebViews in the app share that cookie automatically.
@@ -47,8 +47,8 @@ export default function RootLayout() {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 5000);
     try {
-      // Ping the dashboard — the server will redirect to /login if not authed
-      const res = await fetch(siteUrl('/dashboard'), {
+      // Ping a member-only page — the server redirects to /login if not authed
+      const res = await fetch(siteUrl(REGISTER.website.authCheckPath), {
         method: 'GET',
         redirect: 'follow',
         credentials: 'include',
