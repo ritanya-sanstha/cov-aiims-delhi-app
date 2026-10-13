@@ -18,8 +18,10 @@
   "website": {
     "baseUrl": "https://aiimsdelhi.ritanyasanstha.in",
     "loginPath": "/login",
-    "homePath": "/dashboard",
-    "logoutPath": "/api/auth/signout",
+    "homePath": "/",
+    "authCheckPath": "/profile",
+    "profilePath": "/profile",
+    "signOutButtonText": "Sign Out",
     "allowedDomains": [
       "aiimsdelhi.ritanyasanstha.in",
       "ritanyasanstha.in"
@@ -37,11 +39,26 @@
 
   "navigation": {
     "tabs": [
-      { "id": "home",      "label": "Home",      "icon": "home",      "path": "/dashboard" },
+      { "id": "home",      "label": "Home",      "icon": "home",      "path": "/"          },
       { "id": "helpline",  "label": "Helpline",  "icon": "heart",     "path": "/gethelp"   },
       { "id": "directory", "label": "Directory", "icon": "people",    "path": "/alumni"    },
       { "id": "jobs",      "label": "Jobs",      "icon": "briefcase", "path": "/jobs"      },
       { "id": "more",      "label": "More",      "icon": "grid",      "native": true      }
+    ],
+    "more": [
+      { "label": "Profile & settings", "icon": "person-circle-outline",      "path": "/profile" },
+      { "label": "Alerts",             "icon": "notifications-outline",      "path": "/notifications" },
+      { "label": "Mentors",            "icon": "ear-outline",                "path": "/listeningear" },
+      { "label": "Volunteer",          "icon": "hand-left-outline",          "path": "/volunteer" },
+      { "label": "Learning Sessions",  "icon": "school-outline",             "path": "/sundaysessions" },
+      { "label": "Campaigns",          "icon": "megaphone-outline",          "path": "/campaigns" },
+      { "label": "Communities",        "icon": "people-circle-outline",      "path": "/communities" },
+      { "label": "Matrimonial",        "icon": "heart-circle-outline",       "path": "/matrimonial" },
+      { "label": "Flatmates Finder",   "icon": "home-outline",               "path": "/flatmates" },
+      { "label": "About",              "icon": "information-circle-outline", "path": "/about" },
+      { "label": "FAQ",                "icon": "help-circle-outline",        "path": "/faq" },
+      { "label": "Privacy Policy",     "icon": "shield-checkmark-outline",   "path": "/privacy-policy" },
+      { "label": "Terms & Conditions", "icon": "document-text-outline",      "path": "/terms" }
     ]
   },
 

@@ -6,7 +6,7 @@
  *
  * Tab icons: Ionicons (bundled with @expo/vector-icons)
  * Tab mapping:
- *   home      → /dashboard
+ *   home      → /
  *   helpline  → /helpline
  *   directory → /directory
  *   jobs      → /jobs

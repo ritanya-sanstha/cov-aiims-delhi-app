@@ -3,7 +3,7 @@
  *
  * Shows the website's own /login page inside a full-screen WebView.
  * The website handles all OTP/WhatsApp/password logic.
- * When the website redirects away from /login (to /dashboard etc.),
+ * When the website redirects away from /login (to the member home etc.),
  * we know the user has logged in → navigate to the main tabs.
  *
  * Security:

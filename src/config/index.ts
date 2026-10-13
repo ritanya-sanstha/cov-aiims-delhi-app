@@ -15,6 +15,14 @@ export interface TabConfig {
   native?: boolean;
 }
 
+export interface MoreLink {
+  label: string;
+  /** Ionicons name */
+  icon: string;
+  /** Website page opened inside the app */
+  path: string;
+}
+
 export interface InstituteRegister {
   institute: {
     name: string;
@@ -33,9 +41,13 @@ export interface InstituteRegister {
   website: {
     baseUrl: string;
     loginPath: string;
-    /** Page of the website that signs the user out (opened inside the app) */
-    logoutPath: string;
     homePath: string;
+    /** Member-only page used at launch to tell if the user is logged in */
+    authCheckPath: string;
+    /** Page that has the website's own Sign Out button (opened in the app) */
+    profilePath: string;
+    /** Visible text of that button */
+    signOutButtonText: string;
     allowedDomains: string[];
   };
   branding: {
@@ -48,6 +60,8 @@ export interface InstituteRegister {
   };
   navigation: {
     tabs: TabConfig[];
+    /** Pages listed on the native More screen */
+    more: MoreLink[];
   };
   standard: {
     ritanyaTreeLogo: boolean;
@@ -64,16 +78,17 @@ export const REGISTER: InstituteRegister =
     // Fallback for bare metro / local dev without REGISTER_FILE set
     institute: { name: 'COV – AIIMS Delhi', shortName: 'AIIMS Delhi', code: 'AD', tagline: 'Alumni Network', description: '' },
     app: { appName: 'AIIMS Delhi Alumni', bundleId: 'in.ritanyasanstha.aiimsdelhi', androidPackage: 'in.ritanyasanstha.aiimsdelhi', versionCode: 1, easProfileName: 'aiims-delhi' },
-    website: { baseUrl: 'https://aiimsdelhi.ritanyasanstha.in', loginPath: '/login', logoutPath: '/api/auth/signout', homePath: '/dashboard', allowedDomains: ['aiimsdelhi.ritanyasanstha.in', 'ritanyasanstha.in'] },
+    website: { baseUrl: 'https://aiimsdelhi.ritanyasanstha.in', loginPath: '/login', homePath: '/', authCheckPath: '/profile', profilePath: '/profile', signOutButtonText: 'Sign Out', allowedDomains: ['aiimsdelhi.ritanyasanstha.in', 'ritanyasanstha.in'] },
     branding: { logoFile: 'aiims-delhi-logo.png', primaryColor: '#1B2B5E', accentColor: '#C9A84C', statusBarStyle: 'light', splashBg: '#1B2B5E', helplineColor: '#EF4444' },
     navigation: {
       tabs: [
-        { id: 'home', label: 'Home', icon: 'home', path: '/dashboard' },
+        { id: 'home', label: 'Home', icon: 'home', path: '/' },
         { id: 'helpline', label: 'Helpline', icon: 'heart', path: '/gethelp' },
         { id: 'directory', label: 'Directory', icon: 'people', path: '/alumni' },
         { id: 'jobs', label: 'Jobs', icon: 'briefcase', path: '/jobs' },
         { id: 'more', label: 'More', icon: 'grid', native: true },
       ],
+      more: [],
     },
     standard: { ritanyaTreeLogo: true, tagline1: 'One Family — Every Stage of Life', tagline2: 'Help Others Celebrate Life', memberIdPrefix: 'AB', memberIdInstCode: 'AD', poweredBy: 'Ritanya Sanstha' },
   };
