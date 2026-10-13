@@ -37,8 +37,8 @@
   "navigation": {
     "tabs": [
       { "id": "home",      "label": "Home",      "icon": "home",      "path": "/dashboard" },
-      { "id": "helpline",  "label": "Helpline",  "icon": "heart",     "path": "/helpline"  },
-      { "id": "directory", "label": "Directory", "icon": "people",    "path": "/directory" },
+      { "id": "helpline",  "label": "Helpline",  "icon": "heart",     "path": "/gethelp"   },
+      { "id": "directory", "label": "Directory", "icon": "people",    "path": "/alumni"    },
       { "id": "jobs",      "label": "Jobs",      "icon": "briefcase", "path": "/jobs"      },
       { "id": "more",      "label": "More",      "icon": "grid",      "path": "/more"      }
     ]

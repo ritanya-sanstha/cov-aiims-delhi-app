@@ -51,7 +51,8 @@ export default function RootLayout() {
       });
       const finalUrl = res.url ?? '';
       const isLogin = finalUrl.includes(REGISTER.website.loginPath);
-      setAuthState(isLogin ? 'loggedOut' : 'loggedIn');
+      // A 404/5xx (e.g. page not deployed) must not count as "logged in".
+      setAuthState(res.ok && !isLogin ? 'loggedIn' : 'loggedOut');
     } catch {
       // Network error → let the login WebView handle it
       setAuthState('loggedOut');
