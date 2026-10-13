@@ -52,6 +52,7 @@ export default function SiteWebView({ path }: Props) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const webViewRef = useRef<WebView>(null);
+  const canGoBack = useRef(false);
   // Full-screen spinner only for the very first load; later navigations show
   // a thin progress bar so the page stays visible and taps feel instant.
   const [initialLoading, setInitialLoading] = useState(true);
@@ -68,14 +69,20 @@ export default function SiteWebView({ path }: Props) {
     useCallback(() => {
       if (Platform.OS !== 'android') return;
       const sub = BackHandler.addEventListener('hardwareBackPress', () => {
-        webViewRef.current?.goBack();
-        return true;
+        // Go back inside the page only if there is a page to go back to;
+        // otherwise let Android handle Back (leave the screen / app).
+        if (canGoBack.current) {
+          webViewRef.current?.goBack();
+          return true;
+        }
+        return false;
       });
       return () => sub.remove();
     }, [])
   );
 
   function handleNavigationStateChange(navState: WebViewNavigation) {
+    canGoBack.current = navState.canGoBack;
     const { url: navUrl } = navState;
     if (!navUrl) return;
 
