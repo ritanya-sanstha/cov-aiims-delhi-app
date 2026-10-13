@@ -45,8 +45,11 @@ jobs:
 
       - name: Patch MainApplication.kt
         run: |
-          MAIN_KT="android/app/src/main/java/in/ritanyasanstha/aiimsdelhi/MainApplication.kt"
-          PKG="in.ritanyasanstha.aiimsdelhi"
+          MAIN_KT=$(find android/app/src/main -name "MainApplication.kt" | head -1)
+          # Keep the package line exactly as Expo wrote it: `in` is a Kotlin
+          # keyword, so the generated file has it backtick-escaped.
+          PKG=$(grep "^package " "$MAIN_KT" | sed 's/^package //')
+          echo "Package: [$PKG]"
           python3 scripts/patch-main-application.py "$MAIN_KT" "$PKG"
           echo "--- MainApplication.kt after patch ---"
           cat "$MAIN_KT"
@@ -68,6 +71,7 @@ jobs:
 
       - name: Build debug APK
         run: |
+          set -o pipefail
           cd android
           chmod +x gradlew
           ./gradlew assembleDebug --no-daemon 2>&1 | tail -50
@@ -85,4 +89,5 @@ jobs:
         with:
           name: aiims-delhi-debug-${{ github.run_number }}
           path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
           retention-days: 30
