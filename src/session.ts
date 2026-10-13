@@ -10,6 +10,10 @@ export function setLandingUrl(url: string): void {
   landingUrl = url;
 }
 
+export function clearLandingUrl(): void {
+  landingUrl = null;
+}
+
 /** Path (+query) of the post-login landing page, or the given default. */
 export function getHomePath(defaultPath: string): string {
   if (!landingUrl) return defaultPath;

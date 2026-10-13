@@ -3,24 +3,26 @@
  * Everything shown comes from the Register Artifact.
  */
 import { Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
 import { REGISTER, siteUrl } from '../../src/config';
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 
-function Row({ icon, label, onPress }: { icon: IoniconName; label: string; onPress: () => void }) {
+function Row({ icon, label, onPress, external = true }: { icon: IoniconName; label: string; onPress: () => void; external?: boolean }) {
   return (
     <TouchableOpacity style={styles.row} onPress={onPress} accessibilityRole="button">
       <Ionicons name={icon} size={22} color={REGISTER.branding.primaryColor} />
       <Text style={styles.rowLabel}>{label}</Text>
-      <Ionicons name="open-outline" size={18} color="#9CA3AF" />
+      {external && <Ionicons name="open-outline" size={18} color="#9CA3AF" />}
     </TouchableOpacity>
   );
 }
 
 export default function MoreScreen() {
   const { institute, standard, branding, website } = REGISTER;
+  const router = useRouter();
   const version = Constants.expoConfig?.version ?? '';
   const open = (path: string) => () => { Linking.openURL(siteUrl(path)).catch(() => {}); };
 
@@ -35,6 +37,7 @@ export default function MoreScreen() {
       <View style={styles.card}>
         <Row icon="globe-outline" label="Open website in browser" onPress={open('/')} />
         <Row icon="log-in-outline" label="Open login page in browser" onPress={open(website.loginPath)} />
+        <Row icon="log-out-outline" label="Sign out" external={false} onPress={() => router.push('/signout')} />
       </View>
 
       <View style={styles.footer}>

@@ -34,8 +34,9 @@ export default function RootLayout() {
   useEffect(() => {
     if (authState === 'loading' || !navState?.key) return;
 
-    const group = segments[0];
-    if (group === '(auth)' || group === '(tabs)') return;
+    // Only act on the launch route ("/", no segments). Any other screen
+    // (login, tabs, /signout, ...) manages its own navigation.
+    if (segments.length > 0) return;
 
     router.replace(authState === 'loggedIn' ? '/(tabs)/home' : '/(auth)/login');
   }, [authState, segments, navState?.key]);
