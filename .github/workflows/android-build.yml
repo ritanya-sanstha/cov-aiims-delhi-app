@@ -39,12 +39,8 @@ jobs:
 
       - name: Enable new arch + Hermes in app.config.js BEFORE prebuild
         run: |
-          # newArchEnabled: false causes prebuild to write newArchEnabled=false to
-          # gradle.properties, which strips libreact_featureflagsjni.so from APK
-          # resulting in crash on launch. Must be true BEFORE prebuild runs.
           sed -i 's/newArchEnabled: false/newArchEnabled: true/' app.config.js || true
           sed -i "s/'jsc'/'hermes'/" app.config.js || true
-          echo "--- app.config.js relevant lines ---"
           grep -E "newArchEnabled|jsEngine|hermes" app.config.js || true
 
       - name: Expo Prebuild
@@ -53,38 +49,22 @@ jobs:
           REGISTER_FILE: ./registers/aiims-delhi.register.json
           ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
 
-      - name: Verify newArchEnabled=true in gradle.properties after prebuild
+      - name: Verify gradle.properties and MainApplication.kt after prebuild
         run: |
-          echo "--- gradle.properties after prebuild ---"
           cat android/gradle.properties
-          grep -i "newArch" android/gradle.properties || echo "(newArchEnabled not set - defaults to true)"
-          echo "--- MainApplication.kt (first 30 lines) ---"
-          head -30 android/app/src/main/java/in/ritanyasanstha/aiimsdelhi/MainApplication.kt
+          head -20 android/app/src/main/java/in/ritanyasanstha/aiimsdelhi/MainApplication.kt
 
-      - name: Pin react-android and hermes-android versions (Gradle 9.x BOM fix)
+      - name: Pin react-android and hermes-android to 0.79.0
         run: |
           sed -i 's/implementation("com.facebook.react:react-android")/implementation("com.facebook.react:react-android:0.79.0")/g' android/app/build.gradle
           sed -i 's/implementation("com.facebook.react:hermes-android")/implementation("com.facebook.react:hermes-android:0.79.0")/g' android/app/build.gradle
           grep -E "react-android|hermes-android" android/app/build.gradle || echo "WARNING: pins not found"
 
       - name: Add bundleInDebug=true to gradle.properties
-        run: |
-          if grep -q "^bundleInDebug" android/gradle.properties; then
-            sed -i 's/^bundleInDebug=.*/bundleInDebug=true/' android/gradle.properties
-          else
-            echo "bundleInDebug=true" >> android/gradle.properties
-          fi
+        run: grep -q "^bundleInDebug" android/gradle.properties && sed -i 's/^bundleInDebug=.*/bundleInDebug=true/' android/gradle.properties || echo "bundleInDebug=true" >> android/gradle.properties
 
       - name: Patch NativeStatePropsGetter.cpp for RN 0.79
-        run: |
-          python3 -c "
-f='node_modules/expo-modules-core/android/src/main/cpp/fabric/NativeStatePropsGetter.cpp'
-c=open(f).read()
-old='state->updateState(std::move(newState), react::EventQueue::UpdateMode::unstable_Immediate);'
-n=c.count(old)
-open(f,'w').write(c.replace(old,'state->updateState(std::move(newState));'))
-print(str(n)+' occurrence(s) patched')
-"
+        run: python3 -c "f='node_modules/expo-modules-core/android/src/main/cpp/fabric/NativeStatePropsGetter.cpp'; c=open(f).read(); old='state->updateState(std::move(newState), react::EventQueue::UpdateMode::unstable_Immediate);'; n=c.count(old); open(f,'w').write(c.replace(old,'state->updateState(std::move(newState));')); print(str(n)+' occurrence(s) patched')"
 
       - name: Build debug APK
         run: |
@@ -94,16 +74,12 @@ print(str(n)+' occurrence(s) patched')
         env:
           ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
 
-      - name: Verify APK contains libreact_featureflagsjni.so
+      - name: Verify libreact_featureflagsjni.so in APK
         run: |
           APK="android/app/build/outputs/apk/debug/app-debug.apk"
           echo "APK size: $(du -h $APK | cut -f1)"
-          echo "--- Checking for libreact_featureflagsjni.so (must be present) ---"
-          unzip -l "$APK" | grep "libreact_featureflagsjni" || echo "CRITICAL: libreact_featureflagsjni.so MISSING - app will crash"
-          echo "--- All native libs ---"
+          unzip -l "$APK" | grep "libreact_featureflagsjni" || echo "CRITICAL MISSING: libreact_featureflagsjni.so"
           unzip -l "$APK" | grep "lib/" | head -40
-          echo "--- JS bundle ---"
-          unzip -l "$APK" | grep -E "assets/index|bundle" || echo "WARNING: no JS bundle"
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
