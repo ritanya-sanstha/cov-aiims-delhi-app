@@ -56,9 +56,14 @@ jobs:
 
       - name: Pin react-android and hermes-android to 0.79.0
         run: |
-          sed -i 's/implementation("com.facebook.react:react-android")/implementation("com.facebook.react:react-android:0.79.0")/g' android/app/build.gradle
-          sed -i 's/implementation("com.facebook.react:hermes-android")/implementation("com.facebook.react:hermes-android:0.79.0")/g' android/app/build.gradle
-          grep -E "react-android|hermes-android" android/app/build.gradle || echo "WARNING: pins not found"
+          sed -i 's/react-android")/react-android:0.79.0")/g' android/app/build.gradle
+          sed -i "s/react-android')/react-android:0.79.0')/g" android/app/build.gradle
+          sed -i 's/hermes-android")/hermes-android:0.79.0")/g' android/app/build.gradle
+          sed -i "s/hermes-android')/hermes-android:0.79.0')/g" android/app/build.gradle
+          echo "=== Dependency lines in build.gradle ==="
+          grep -n "react-android\|hermes-android" android/app/build.gradle || echo "WARNING: not found"
+          echo "=== build.gradle first 80 lines ==="
+          head -80 android/app/build.gradle
 
       - name: Add bundleInDebug=true to gradle.properties
         run: grep -q "^bundleInDebug" android/gradle.properties && sed -i 's/^bundleInDebug=.*/bundleInDebug=true/' android/gradle.properties || echo "bundleInDebug=true" >> android/gradle.properties
@@ -70,7 +75,13 @@ jobs:
         run: |
           cd android
           chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon --stacktrace
+          ./gradlew assembleDebug --no-daemon --stacktrace 2>&1 | tee /tmp/build.log || {
+            echo "===== KOTLIN / COMPILE ERRORS ====="
+            grep -E "^e: |Unresolved reference|cannot find symbol|error: " /tmp/build.log | head -50 || true
+            echo "===== LAST 80 LINES ====="
+            tail -80 /tmp/build.log
+            exit 1
+          }
         env:
           ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
 
