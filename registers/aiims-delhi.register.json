@@ -23,6 +23,7 @@
     "profilePath": "/profile",
     "signOutButtonText": "Sign Out",
     "hideSiteBottomNavMarkers": ["mentors", "jobs"],
+    "contactEmail": "contact@ritanyasanstha.org",
     "allowedDomains": [
       "aiimsdelhi.ritanyasanstha.in",
       "ritanyasanstha.in"

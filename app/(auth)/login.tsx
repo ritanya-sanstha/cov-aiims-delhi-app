@@ -75,6 +75,8 @@ export default function LoginScreen() {
         thirdPartyCookiesEnabled
         sharedCookiesEnabled
         originWhitelist={REGISTER.website.allowedDomains.map(d => `https://${d}`)}
+        // target=_blank / window.open load in this view; without this they were dropped
+        setSupportMultipleWindows={false}
         allowFileAccess={false}
         allowUniversalAccessFromFileURLs={false}
         mixedContentMode="never"

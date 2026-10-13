@@ -106,6 +106,8 @@ export default function SignOutScreen() {
         javaScriptEnabled
         domStorageEnabled
         originWhitelist={REGISTER.website.allowedDomains.map((d) => `https://${d}`)}
+        // target=_blank / window.open load in this view; without this they were dropped
+        setSupportMultipleWindows={false}
         allowFileAccess={false}
         mixedContentMode="never"
       />

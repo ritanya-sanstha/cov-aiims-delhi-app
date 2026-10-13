@@ -3,10 +3,11 @@
  * button. Used by the More menu (app/page.tsx) and for website links opened
  * from outside the app (app/[...path].tsx).
  */
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useCallback, useRef } from 'react';
+import { BackHandler, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import WebView from 'react-native-webview';
+import WebView, { WebViewNavigation } from 'react-native-webview';
 import { REGISTER, siteUrl, isAllowedUrl } from '../config';
 import { hideSiteBottomNavScript } from '../siteScripts';
 
@@ -16,9 +17,26 @@ export default function InAppPage({ path, title }: { path: string; title?: strin
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { primaryColor, accentColor } = REGISTER.branding;
+  const webViewRef = useRef<WebView>(null);
+  const canGoBack = useRef(false);
 
   // Opened from a link there may be nothing to go back to: go to the app's home.
   const goBack = () => (router.canGoBack() ? router.back() : router.replace('/'));
+
+  // Phone Back: go back inside the page first, then leave the screen.
+  useFocusEffect(
+    useCallback(() => {
+      if (Platform.OS !== 'android') return;
+      const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+        if (canGoBack.current) {
+          webViewRef.current?.goBack();
+          return true;
+        }
+        return false;
+      });
+      return () => sub.remove();
+    }, [])
+  );
 
   return (
     <View style={styles.container}>
@@ -30,6 +48,8 @@ export default function InAppPage({ path, title }: { path: string; title?: strin
         <View style={styles.spacer} />
       </View>
       <WebView
+        ref={webViewRef}
+        onNavigationStateChange={(n: WebViewNavigation) => { canGoBack.current = n.canGoBack; }}
         source={{ uri: siteUrl(path || '/') }}
         style={styles.webview}
         injectedJavaScript={HIDE_SITE_NAV_JS}
@@ -39,6 +59,8 @@ export default function InAppPage({ path, title }: { path: string; title?: strin
         javaScriptEnabled
         domStorageEnabled
         originWhitelist={REGISTER.website.allowedDomains.map((d) => `https://${d}`)}
+        // target=_blank / window.open load in this view; without this they were dropped
+        setSupportMultipleWindows={false}
         allowFileAccess={false}
         mixedContentMode="never"
       />
