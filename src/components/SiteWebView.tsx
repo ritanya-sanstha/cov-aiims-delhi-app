@@ -41,6 +41,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { REGISTER, siteUrl, isAllowedUrl } from '../config';
 import { appUserAgent, handleSiteMessage, siteInjectedScript } from '../siteScripts';
 import AppBar, { APP_BG } from './AppBar';
+import { colors, fonts } from '../theme';
 
 const HIDE_SITE_NAV_JS = siteInjectedScript();
 
@@ -129,17 +130,23 @@ export default function SiteWebView({ path, title, subtitle }: Props) {
 
   if (error) {
     return (
-      <ScrollView
-        contentContainerStyle={[styles.center, { backgroundColor: '#F0F2F5', paddingTop: insets.top + 32 }]}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={primary} />}
-      >
-        <Ionicons name="wifi-outline" size={48} color="#9CA3AF" />
-        <Text style={styles.errorTitle}>No connection</Text>
-        <Text style={styles.errorSub}>Pull down to retry</Text>
-        <TouchableOpacity style={[styles.retryBtn, { backgroundColor: primary }]} onPress={handleRefresh}>
-          <Text style={styles.retryText}>Retry</Text>
-        </TouchableOpacity>
-      </ScrollView>
+      <View style={[styles.container, { backgroundColor: APP_BG }]}>
+        {nativeBar && focused && <StatusBar style="dark" />}
+        {nativeBar && <AppBar title={title!} subtitle={subtitle} />}
+        <ScrollView
+          contentContainerStyle={[styles.center, !nativeBar && { paddingTop: insets.top + 32 }]}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={primary} />}
+        >
+          <View style={styles.errorIcon}>
+            <Ionicons name="cloud-offline-outline" size={40} color={colors.textFaint} />
+          </View>
+          <Text style={styles.errorTitle}>No connection</Text>
+          <Text style={styles.errorSub}>Check your internet and try again. Pull down to refresh also works.</Text>
+          <TouchableOpacity style={[styles.retryBtn, { backgroundColor: primary }]} onPress={handleRefresh} accessibilityRole="button">
+            <Text style={styles.retryText}>Try again</Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </View>
     );
   }
 
@@ -147,9 +154,10 @@ export default function SiteWebView({ path, title, subtitle }: Props) {
     <View style={[styles.container, { paddingTop: nativeBar ? 0 : insets.top, backgroundColor: nativeBar ? APP_BG : primary }]}>
       {nativeBar && focused && <StatusBar style="dark" />}
       {nativeBar && <AppBar title={title!} subtitle={subtitle} />}
+      <View style={styles.body}>
       {initialLoading && (
-        <View style={[styles.loader, { backgroundColor: primary }]}>
-          <ActivityIndicator size="large" color={accent} />
+        <View style={[styles.loader, { backgroundColor: nativeBar ? APP_BG : primary }]}>
+          <ActivityIndicator size="large" color={nativeBar ? primary : accent} />
         </View>
       )}
       {!initialLoading && progress > 0 && progress < 1 && (
@@ -185,12 +193,14 @@ export default function SiteWebView({ path, title, subtitle }: Props) {
         bounces={Platform.OS === 'ios'}
         overScrollMode="never"
       />
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F0F2F5' },
+  container: { flex: 1, backgroundColor: APP_BG },
+  body: { flex: 1 },
   webview:   { flex: 1, backgroundColor: '#FFFFFF' },
   progress: { position: 'absolute', top: 0, left: 0, height: 3, zIndex: 11 },
   loader: {
@@ -200,19 +210,23 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   center: {
-    flex: 1,
+    flexGrow: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 32,
-    gap: 12,
+    paddingHorizontal: 24,
+    paddingBottom: 80,
+    gap: 10,
   },
-  errorTitle: { fontSize: 18, fontWeight: '600', color: '#374151', marginTop: 8 },
-  errorSub:   { fontSize: 14, color: '#6B7280' },
+  errorIcon: { width: 88, height: 88, borderRadius: 44, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center', elevation: 2 },
+  errorTitle: { fontFamily: fonts.title, fontSize: 22, letterSpacing: -0.3, color: colors.text, marginTop: 8 },
+  errorSub:   { fontFamily: fonts.regular, fontSize: 15, lineHeight: 22, color: '#4B5563', textAlign: 'center' },
   retryBtn: {
-    marginTop: 16,
+    marginTop: 10,
+    minHeight: 48,
     paddingHorizontal: 32,
-    paddingVertical: 12,
-    borderRadius: 8,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  retryText: { color: '#fff', fontWeight: '600', fontSize: 15 },
+  retryText: { fontFamily: fonts.bold, color: '#fff', fontSize: 16 },
 });

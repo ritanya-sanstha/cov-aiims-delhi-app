@@ -11,13 +11,16 @@
  * Configure in the register: website.profilePath, website.signOutButtonText.
  */
 import { useRef, useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { useRouter } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { StyleSheet, Text, View } from 'react-native';
+import { useCallback } from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
 import WebView, { WebViewMessageEvent, WebViewNavigation } from 'react-native-webview';
 import { appUserAgent } from '../src/siteScripts';
 import { REGISTER, siteUrl, isAllowedUrl } from '../src/config';
 import { clearLandingUrl } from '../src/session';
+import AppBar, { APP_BG } from '../src/components/AppBar';
+import { colors, fonts } from '../src/theme';
 
 const { profilePath, loginPath, signOutButtonText } = REGISTER.website;
 
@@ -57,7 +60,8 @@ true;
 
 export default function SignOutScreen() {
   const router = useRouter();
-  const insets = useSafeAreaInsets();
+  const [focused, setFocused] = useState(false);
+  useFocusEffect(useCallback(() => { setFocused(true); return () => setFocused(false); }, []));
   const pressed = useRef(false);
   const finished = useRef(false);
   const [hint, setHint] = useState('');
@@ -88,12 +92,8 @@ export default function SignOutScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={[styles.bar, { paddingTop: insets.top + 8, backgroundColor: REGISTER.branding.primaryColor }]}>
-        <Text style={styles.title}>Signing out…</Text>
-        <TouchableOpacity onPress={() => router.back()} accessibilityRole="button">
-          <Text style={[styles.cancel, { color: REGISTER.branding.accentColor }]}>Cancel</Text>
-        </TouchableOpacity>
-      </View>
+      {focused && <StatusBar style="dark" />}
+      <AppBar title="Signing out…" onBack={() => router.back()} />
       {!!hint && <Text style={styles.hint}>{hint}</Text>}
       <WebView
         source={{ uri: siteUrl(profilePath) }}
@@ -118,10 +118,7 @@ export default function SignOutScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
-  bar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingBottom: 12 },
-  title: { color: '#fff', fontSize: 18, fontWeight: '600' },
-  cancel: { fontSize: 16, fontWeight: '600' },
-  hint: { padding: 12, backgroundColor: '#FEF3C7', color: '#92400E', fontSize: 14 },
+  container: { flex: 1, backgroundColor: APP_BG },
+  hint: { marginHorizontal: 12, marginBottom: 8, padding: 12, borderRadius: 14, backgroundColor: colors.pendingTint, color: colors.pending, fontFamily: fonts.medium, fontSize: 14 },
   webview: { flex: 1 },
 });

@@ -32,10 +32,16 @@ Tabs: Home, Helpline, Directory, Jobs, More. From the top bar: Alerts (bell), Pr
 All other pages (More menu items, shared links) use the sub-page frame: back chevron card + page.
 Target Home is a member dashboard (next session, quick actions, alerts); today it is the website home.
 
+## Implemented in the app
+- Register palette = the AIIMS Delhi website palette (#2E4D23, #F9BF1F, #2E7BA3, #B54321); `branding.secondaryColor`
+  and `branding.alertColor` added (optional, default primary / brick red). Tokens: `src/theme.ts`.
+- Plus Jakarta Sans and Geist loaded in `app/_layout.tsx` (`@expo-google-fonts/*`), used by the native UI.
+- Floating top card (`AppBar`), floating tab bar, More screen as tile grid + list card, sign-out and login on the light ground,
+  offline screen as designed. The More menu no longer lists Profile and Alerts (bell and avatar open them).
+
 ## Gaps between this design and the current app (punch list)
-1. Palette: register still navy/gold; apply the website palette, add `secondaryColor` and `alertColor`.
-2. Fonts: the app uses the system font; load Plus Jakarta Sans and Geist (expo-font) for native text.
-3. Website pages in app mode: ground #F2F3F7 behind white cards, no hero/footer; needs the website to serve
-   an app layout for the `COVApp` user agent (see WEBSITE_APP_MODE.md).
-4. Login: designed as a native-looking page; today it is the website login page in a WebView.
-5. Native Home dashboard and native tab screens need website JSON endpoints (`/api/app/v1/*`), not built.
+1. Website pages in app mode: ground #F2F3F7 behind white cards, no hero/footer; needs the website to serve
+   an app layout for the `COVApp` user agent (see WEBSITE_APP_MODE.md). The pages still use the website's own fonts and layout.
+2. Login: designed as a native-looking page; today it is the website login page in a WebView.
+3. Native Home dashboard and native tab screens need website JSON endpoints (`/api/app/v1/*`), not built.
+4. Not yet on a device: verify fonts load, tab bar labels fit, top bar and gaps.

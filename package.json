@@ -12,6 +12,8 @@
     "lint": "eslint ."
   },
   "dependencies": {
+    "@expo-google-fonts/geist": "0.4.2",
+    "@expo-google-fonts/plus-jakarta-sans": "0.4.2",
     "@expo/vector-icons": "^14.1.0",
     "expo": "~53.0.27",
     "expo-build-properties": "~0.14.8",
