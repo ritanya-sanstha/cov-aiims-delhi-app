@@ -107,7 +107,7 @@ export function siteInjectedScript(): string {
   }
 
   // --- native header: hide the website's floating header, trim the gap ---
-  var hdr = null, trimPath = null, trims = 0, lastTrim = 0, chromeSig = '';
+  var hdr = null, hdrBottom = 0, trimPath = null, trims = 0, lastTrim = 0, chromeSig = '';
   function headerKept() {
     var p = location.pathname;
     for (var i = 0; i < keepPaths.length; i++) {
@@ -136,7 +136,8 @@ export function siteInjectedScript(): string {
       var el = all[i], tag = el.tagName;
       if (tag === 'SCRIPT' || tag === 'STYLE' || tag === 'NOSCRIPT') continue;
       var pos = getComputedStyle(el).position;
-      if (pos === 'fixed' || pos === 'sticky') { fixedList.push(el); continue; }
+      // fixed/sticky bars and absolutely positioned decoration (hero background photos...) are not content
+      if (pos === 'fixed' || pos === 'sticky' || pos === 'absolute') { fixedList.push(el); continue; }
       var inFixed = false;
       for (var f = 0; f < fixedList.length; f++) { if (fixedList[f].contains(el)) { inFixed = true; break; } }
       if (inFixed) continue;
@@ -159,6 +160,7 @@ export function siteInjectedScript(): string {
     for (var i = 0; i < trimmed.length; i++) {
       var t = trimmed[i];
       if (t.prev) t.el.style.setProperty(t.prop, t.prev, t.prio); else t.el.style.removeProperty(t.prop);
+      t.el.__stickyDone = false;
     }
     trimmed = [];
   }
@@ -169,6 +171,7 @@ export function siteInjectedScript(): string {
     if (trims >= 6 || now - lastTrim < 700 || !document.body) return;
     trims++; lastTrim = now;
     undoTrim();
+    fixStickyOffsets();
     var f = firstContentTop();
     var left = f.top - 12;
     if (!f.el || !isFinite(f.top) || left <= 0) return;
@@ -186,6 +189,23 @@ export function siteInjectedScript(): string {
         st.setProperty(props[q], (v - cut) + 'px', 'important');
         left -= cut;
       }
+    }
+  }
+  // Sticky bars pinned below the (now hidden) header, e.g. "sticky top-16": pull them up to the top.
+  function fixStickyOffsets() {
+    if (!hdrBottom) return;
+    var els = document.body ? document.body.querySelectorAll('*') : [];
+    for (var i = 0; i < els.length; i++) {
+      var el = els[i];
+      if (el === hdr || (hdr && hdr.contains(el)) || el.__stickyDone) continue;
+      var cs = getComputedStyle(el);
+      if (cs.position !== 'sticky') continue;
+      var top = parseFloat(cs.top);
+      if (!isFinite(top) || top <= 0 || top > 200) continue;
+      el.__stickyDone = true;
+      var st = el.style;
+      trimmed.push({ el: el, prop: 'top', prev: st.getPropertyValue('top'), prio: st.getPropertyPriority('top') });
+      st.setProperty('top', Math.max(0, top - hdrBottom) + 'px', 'important');
     }
   }
   // Tell the app who is signed in (admin link, profile photo / initials) from the header it hides.
@@ -222,6 +242,7 @@ export function siteInjectedScript(): string {
     if (!hdr || !document.contains(hdr)) {
       hdr = findHeader();
       if (!hdr) return;
+      hdrBottom = Math.round(hdr.getBoundingClientRect().bottom);
     }
     reportChrome();
     if (hdr.style.getPropertyValue('display') !== 'none') hdr.style.setProperty('display', 'none', 'important');

@@ -17,7 +17,7 @@ type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 export const APP_BG = '#F2F3F7';
 const LOGO = require('../../assets/logos/aiims-delhi-logo.png');
 
-export default function AppBar({ title }: { title: string }) {
+export default function AppBar({ title, onBack }: { title: string; onBack?: () => void }) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { primaryColor } = REGISTER.branding;
@@ -40,10 +40,17 @@ export default function AppBar({ title }: { title: string }) {
   return (
     <View style={[styles.wrap, { paddingTop: insets.top + 8 }]}>
       <View style={styles.card}>
-        <Image source={LOGO} style={styles.logo} />
+        {onBack ? (
+          <TouchableOpacity onPress={onBack} accessibilityRole="button" accessibilityLabel="Back" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} style={styles.back}>
+            <Ionicons name="chevron-back" size={24} color={primaryColor} />
+          </TouchableOpacity>
+        ) : (
+          <Image source={LOGO} style={styles.logo} />
+        )}
         <Text style={[styles.title, { color: primaryColor }]} numberOfLines={1}>{title}</Text>
-        {admin && <Action icon="shield-checkmark-outline" label="Admin panel" path="/admin" />}
-        <Action icon="notifications-outline" label="Alerts" path="/notifications" />
+        {!onBack && admin && <Action icon="shield-checkmark-outline" label="Admin panel" path="/admin" />}
+        {!onBack && <Action icon="notifications-outline" label="Alerts" path="/notifications" />}
+        {!onBack && (
         <TouchableOpacity
           onPress={() => router.push({ pathname: '/page', params: { path: REGISTER.website.profilePath, title: 'Profile' } })}
           accessibilityRole="button"
@@ -58,6 +65,7 @@ export default function AppBar({ title }: { title: string }) {
             <Ionicons name="person-circle-outline" size={30} color="#4B5563" />
           )}
         </TouchableOpacity>
+        )}
       </View>
     </View>
   );
@@ -82,6 +90,7 @@ const styles = StyleSheet.create({
   logo: { width: 36, height: 36, borderRadius: 18, marginRight: 4 },
   title: { flex: 1, fontSize: 18, fontWeight: '800', letterSpacing: -0.2 },
   action: { padding: 6 },
+  back: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', marginRight: 4, backgroundColor: '#F2F3F7' },
   avatar: { width: 32, height: 32, borderRadius: 16, borderWidth: 1, borderColor: '#D1D5DB' },
   initials: { backgroundColor: '#0D9488', alignItems: 'center', justifyContent: 'center', borderColor: '#0D9488' },
   initialsText: { color: '#fff', fontSize: 13, fontWeight: '700' },

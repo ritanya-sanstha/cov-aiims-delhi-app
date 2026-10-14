@@ -3,20 +3,20 @@
  * button. Used by the More menu (app/page.tsx) and for website links opened
  * from outside the app (app/[...path].tsx).
  */
-import { useCallback, useRef } from 'react';
-import { BackHandler, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useCallback, useRef, useState } from 'react';
+import { BackHandler, Platform, StyleSheet, View } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
 import WebView, { WebViewNavigation } from 'react-native-webview';
 import { REGISTER, siteUrl, isAllowedUrl } from '../config';
 import { appUserAgent, handleSiteMessage, siteInjectedScript } from '../siteScripts';
+import AppBar, { APP_BG } from './AppBar';
 
 const HIDE_SITE_NAV_JS = siteInjectedScript();
 
 export default function InAppPage({ path, title }: { path: string; title?: string }) {
   const router = useRouter();
-  const insets = useSafeAreaInsets();
-  const { primaryColor, accentColor } = REGISTER.branding;
+  const [focused, setFocused] = useState(false);
   const webViewRef = useRef<WebView>(null);
   const canGoBack = useRef(false);
 
@@ -26,7 +26,8 @@ export default function InAppPage({ path, title }: { path: string; title?: strin
   // Phone Back: go back inside the page first, then leave the screen.
   useFocusEffect(
     useCallback(() => {
-      if (Platform.OS !== 'android') return;
+      setFocused(true);
+      if (Platform.OS !== 'android') return () => setFocused(false);
       const sub = BackHandler.addEventListener('hardwareBackPress', () => {
         if (canGoBack.current) {
           webViewRef.current?.goBack();
@@ -34,22 +35,21 @@ export default function InAppPage({ path, title }: { path: string; title?: strin
         }
         return false;
       });
-      return () => sub.remove();
+      return () => { sub.remove(); setFocused(false); };
     }, [])
   );
 
   return (
     <View style={styles.container}>
-      <View style={[styles.bar, { paddingTop: insets.top + 8, backgroundColor: primaryColor }]}>
-        <TouchableOpacity onPress={goBack} accessibilityRole="button">
-          <Text style={[styles.back, { color: accentColor }]}>‹ Back</Text>
-        </TouchableOpacity>
-        <Text style={styles.title} numberOfLines={1}>{title ?? REGISTER.institute.shortName}</Text>
-        <View style={styles.spacer} />
-      </View>
+      {focused && <StatusBar style="dark" />}
+      <AppBar title={title ?? REGISTER.institute.shortName} onBack={goBack} />
       <WebView
         ref={webViewRef}
-        onNavigationStateChange={(n: WebViewNavigation) => { canGoBack.current = n.canGoBack; }}
+        onNavigationStateChange={(n: WebViewNavigation) => {
+          canGoBack.current = n.canGoBack;
+          // session expired (the website sent us to its login page): use the app's login screen
+          if (n.url && n.url.includes(REGISTER.website.loginPath)) router.replace('/(auth)/login');
+        }}
         source={{ uri: siteUrl(path || '/') }}
         applicationNameForUserAgent={appUserAgent()}
         style={styles.webview}
@@ -72,10 +72,6 @@ export default function InAppPage({ path, title }: { path: string; title?: strin
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
-  bar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingBottom: 12 },
-  back: { fontSize: 17, fontWeight: '600', width: 64 },
-  title: { flex: 1, color: '#fff', fontSize: 17, fontWeight: '600', textAlign: 'center' },
-  spacer: { width: 64 },
-  webview: { flex: 1 },
+  container: { flex: 1, backgroundColor: APP_BG },
+  webview: { flex: 1, backgroundColor: '#fff' },
 });

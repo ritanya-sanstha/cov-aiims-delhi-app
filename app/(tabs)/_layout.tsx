@@ -40,6 +40,7 @@ export default function TabsLayout() {
         headerShown: false,
         tabBarActiveTintColor: primary,
         tabBarInactiveTintColor: inactive,
+        tabBarAllowFontScaling: false,
         // floating rounded bar, like the website's own bottom bar
         tabBarStyle: {
           position: 'relative',
@@ -60,7 +61,7 @@ export default function TabsLayout() {
         tabBarLabelStyle: {
           fontSize: 10,
           fontWeight: '700',
-          letterSpacing: 0.6,
+          letterSpacing: 0.2,
           textTransform: 'uppercase',
         },
       }}

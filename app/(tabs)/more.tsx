@@ -4,10 +4,13 @@
  */
 import { Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useCallback, useState } from 'react';
+import { useFocusEffect } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
 import { REGISTER, siteUrl } from '../../src/config';
+import AppBar, { APP_BG } from '../../src/components/AppBar';
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -24,14 +27,18 @@ function Row({ icon, label, onPress, external = true }: { icon: IoniconName; lab
 export default function MoreScreen() {
   const { institute, standard, branding, website, navigation } = REGISTER;
   const router = useRouter();
-  const insets = useSafeAreaInsets();
+  const [focused, setFocused] = useState(false);
+  useFocusEffect(useCallback(() => { setFocused(true); return () => setFocused(false); }, []));
   const version = Constants.expoConfig?.version ?? '';
   const open = (path: string) => () => { Linking.openURL(siteUrl(path)).catch(() => {}); };
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      <View style={[styles.header, { backgroundColor: branding.primaryColor, paddingTop: insets.top + 24 }]}>
-        <Text style={[styles.title, { color: branding.accentColor }]}>{institute.name}</Text>
+    <View style={styles.screen}>
+    {focused && <StatusBar style="dark" />}
+    <AppBar title="More" />
+    <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
+      <View style={styles.header}>
+        <Text style={[styles.title, { color: branding.primaryColor }]}>{institute.name}</Text>
         {!!institute.tagline && <Text style={styles.headerText}>{institute.tagline}</Text>}
         {!!institute.description && <Text style={styles.headerSub}>{institute.description}</Text>}
       </View>
@@ -68,17 +75,19 @@ export default function MoreScreen() {
         {!!version && <Text style={styles.small}>Version {version}</Text>}
       </View>
     </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#F0F2F5' },
-  content: { paddingBottom: 32 },
-  header: { padding: 24, paddingTop: 48 },
-  title: { fontSize: 22, fontWeight: '700' },
-  headerText: { color: '#FFFFFF', fontSize: 15, marginTop: 4 },
-  headerSub: { color: '#D1D5DB', fontSize: 13, marginTop: 8 },
-  card: { backgroundColor: '#FFFFFF', margin: 16, borderRadius: 12, overflow: 'hidden' },
+  screen: { flex: 1, backgroundColor: APP_BG },
+  scroll: { flex: 1 },
+  content: { paddingBottom: 24 },
+  header: { backgroundColor: '#FFFFFF', margin: 16, marginBottom: 0, padding: 18, borderRadius: 20, elevation: 2, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 8, shadowOffset: { width: 0, height: 2 } },
+  title: { fontSize: 18, fontWeight: '800' },
+  headerText: { color: '#374151', fontSize: 14, marginTop: 4 },
+  headerSub: { color: '#6B7280', fontSize: 13, marginTop: 6 },
+  card: { backgroundColor: '#FFFFFF', margin: 16, borderRadius: 20, overflow: 'hidden', elevation: 2, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 8, shadowOffset: { width: 0, height: 2 } },
   row: { flexDirection: 'row', alignItems: 'center', padding: 16, gap: 12, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#E5E7EB' },
   rowLabel: { flex: 1, fontSize: 16, color: '#111827' },
   footer: { alignItems: 'center', paddingHorizontal: 16, gap: 4 },
