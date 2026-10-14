@@ -21,7 +21,7 @@
 import { Alert } from 'react-native';
 import Constants from 'expo-constants';
 import { REGISTER } from './config';
-import { setSiteAdmin } from './session';
+import { setSiteChrome } from './session';
 
 /** Token appended to the WebView user agent: "COVApp/1.0.0". */
 export function appUserAgent(): string {
@@ -107,7 +107,7 @@ export function siteInjectedScript(): string {
   }
 
   // --- native header: hide the website's floating header, trim the gap ---
-  var hdr = null, trimPath = null, trims = 0, lastTrim = 0, adminPosted = false;
+  var hdr = null, trimPath = null, trims = 0, lastTrim = 0, chromeSig = '';
   function headerKept() {
     var p = location.pathname;
     for (var i = 0; i < keepPaths.length; i++) {
@@ -164,10 +164,33 @@ export function siteInjectedScript(): string {
     var shift = top - 12;
     if (isFinite(top) && shift > 0) b.setProperty('margin-top', (-shift) + 'px', 'important');
   }
+  // Tell the app who is signed in (admin link, profile photo / initials) from the header it hides.
+  function avatarData(img) {
+    try {
+      if (img && img.complete && img.naturalWidth) {
+        var c = document.createElement('canvas'); c.width = 96; c.height = 96;
+        c.getContext('2d').drawImage(img, 0, 0, 96, 96);
+        return c.toDataURL('image/jpeg', 0.8);
+      }
+    } catch (e) {}
+    return img ? (img.currentSrc || img.src || '') : '';
+  }
+  function reportChrome() {
+    if (!hdr) return;
+    var a = hdr.querySelector('a[href$="/profile"]') || hdr.querySelector('a[href*="/profile"]');
+    var img = a ? a.querySelector('img') : null;
+    var avatar = img ? avatarData(img) : '';
+    var initials = a && !img ? (a.textContent || '').replace(/\\s+/g, '').slice(0, 2) : '';
+    var admin = !!hdr.querySelector('a[href*="/admin"]');
+    var sig = admin + '|' + initials + '|' + avatar.length + avatar.slice(-24);
+    if (sig === chromeSig) return;
+    chromeSig = sig;
+    post({ kind: 'chrome', admin: admin, avatar: avatar, initials: initials, signedIn: !!a });
+  }
   function nativeHeaderRun() {
     if (!nativeHeader) return;
     if (headerKept()) {
-      if (hdr) { hdr.style.removeProperty('display'); hdr = null; }
+      if (hdr) { hdr.style.removeProperty('display'); hdr = null; chromeSig = ''; }
       if (document.body) document.body.style.removeProperty('margin-top');
       trimPath = null;
       return;
@@ -175,11 +198,8 @@ export function siteInjectedScript(): string {
     if (!hdr || !document.contains(hdr)) {
       hdr = findHeader();
       if (!hdr) return;
-      if (!adminPosted) {
-        adminPosted = true;
-        post({ kind: 'chrome', admin: !!hdr.querySelector('a[href*="/admin"]') });
-      }
     }
+    reportChrome();
     if (hdr.style.getPropertyValue('display') !== 'none') hdr.style.setProperty('display', 'none', 'important');
     trimTop();
   }
@@ -277,9 +297,9 @@ function uploadReason(status: number): string {
 
 /** onMessage handler for site WebViews: shows why an upload failed. */
 export function handleSiteMessage(data: string): void {
-  let msg: { kind?: string; status?: number; path?: string; detail?: string; admin?: boolean };
+  let msg: { kind?: string; status?: number; path?: string; detail?: string; admin?: boolean; avatar?: string; initials?: string; signedIn?: boolean };
   try { msg = JSON.parse(data); } catch { return; }
-  if (msg.kind === 'chrome') { setSiteAdmin(!!msg.admin); return; }
+  if (msg.kind === 'chrome') { setSiteChrome({ admin: !!msg.admin, avatar: msg.avatar || '', initials: msg.initials || '' }); return; }
   if (msg.kind !== 'upload-error') return;
   const now = Date.now();
   if (now - lastUploadAlert < 5000) return;

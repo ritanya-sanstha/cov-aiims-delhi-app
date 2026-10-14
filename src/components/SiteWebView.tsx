@@ -55,7 +55,14 @@ interface Props {
 export default function SiteWebView({ path, title }: Props) {
   const router = useRouter();
   const [focused, setFocused] = useState(false);
-  useFocusEffect(useCallback(() => { setFocused(true); return () => setFocused(false); }, []));
+  const loadedAt = useRef(0);
+  useFocusEffect(useCallback(() => {
+    setFocused(true);
+    // Coming back to a tab that has been away a while: reload, so the page reflects the
+    // current login state and data (otherwise it can keep showing e.g. "Register").
+    if (loadedAt.current && Date.now() - loadedAt.current > 60_000) webViewRef.current?.reload();
+    return () => setFocused(false);
+  }, []));
   const insets = useSafeAreaInsets();
   const webViewRef = useRef<WebView>(null);
   const canGoBack = useRef(false);
@@ -158,7 +165,7 @@ export default function SiteWebView({ path, title }: Props) {
         onShouldStartLoadWithRequest={handleShouldStartLoadWithRequest}
         onError={handleError}
         onLoadProgress={({ nativeEvent }) => setProgress(nativeEvent.progress)}
-        onLoadEnd={() => { setInitialLoading(false); setProgress(0); }}
+        onLoadEnd={() => { setInitialLoading(false); setProgress(0); loadedAt.current = Date.now(); }}
         // Cookie sharing — critical for twin-login
         sharedCookiesEnabled
         thirdPartyCookiesEnabled

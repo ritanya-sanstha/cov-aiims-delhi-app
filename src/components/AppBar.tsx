@@ -10,7 +10,7 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { REGISTER } from '../config';
-import { getSiteAdmin, subscribeSiteAdmin } from '../session';
+import { getSiteChrome, subscribeSiteChrome } from '../session';
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -21,8 +21,9 @@ export default function AppBar({ title }: { title: string }) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { primaryColor } = REGISTER.branding;
-  const [admin, setAdmin] = useState(getSiteAdmin());
-  useEffect(() => subscribeSiteAdmin(setAdmin), []);
+  const [chrome, setChrome] = useState(getSiteChrome());
+  useEffect(() => subscribeSiteChrome(setChrome), []);
+  const { admin, avatar, initials } = chrome;
 
   const Action = ({ icon, label, path }: { icon: IoniconName; label: string; path: string }) => (
     <TouchableOpacity
@@ -43,7 +44,20 @@ export default function AppBar({ title }: { title: string }) {
         <Text style={[styles.title, { color: primaryColor }]} numberOfLines={1}>{title}</Text>
         {admin && <Action icon="shield-checkmark-outline" label="Admin panel" path="/admin" />}
         <Action icon="notifications-outline" label="Alerts" path="/notifications" />
-        <Action icon="person-circle-outline" label="Profile" path={REGISTER.website.profilePath} />
+        <TouchableOpacity
+          onPress={() => router.push({ pathname: '/page', params: { path: REGISTER.website.profilePath, title: 'Profile' } })}
+          accessibilityRole="button"
+          accessibilityLabel="Profile"
+          style={styles.action}
+        >
+          {avatar ? (
+            <Image source={{ uri: avatar }} style={styles.avatar} />
+          ) : initials ? (
+            <View style={[styles.avatar, styles.initials]}><Text style={styles.initialsText}>{initials}</Text></View>
+          ) : (
+            <Ionicons name="person-circle-outline" size={30} color="#4B5563" />
+          )}
+        </TouchableOpacity>
       </View>
     </View>
   );
@@ -68,4 +82,7 @@ const styles = StyleSheet.create({
   logo: { width: 36, height: 36, borderRadius: 18, marginRight: 4 },
   title: { flex: 1, fontSize: 18, fontWeight: '800', letterSpacing: -0.2 },
   action: { padding: 6 },
+  avatar: { width: 32, height: 32, borderRadius: 16, borderWidth: 1, borderColor: '#D1D5DB' },
+  initials: { backgroundColor: '#0D9488', alignItems: 'center', justifyContent: 'center', borderColor: '#0D9488' },
+  initialsText: { color: '#fff', fontSize: 13, fontWeight: '700' },
 });
