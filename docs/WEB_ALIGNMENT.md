@@ -61,7 +61,16 @@ Add one class each, no behaviour change:
 - `components/ShareFab.tsx` (the green "Invite friends" bubble, `fixed bottom-24 left-6`): add `site-fab` to its button. **Decided: hidden in the
   app**; the app has an "Invite a batchmate" tile in More that opens the phone's share sheet. The bubble shares
   `${origin}/register?code=${user.referralCode}` with the text "Hey! Join COV – AIIMS Delhi, the community of AIIMS Delhi alumni. Use my link to register: <link>".
-  Two shell fixes while there: the text hard-codes "COV – AIIMS Delhi" (use `SITE.name` and `SITE.instituteFull`, otherwise every institute's
+  **Referral karma (verified by reading the code):** the link opens `/register?code=<CODE>` (the register page also accepts `ref` and `referral`);
+the form sends `referredByCode`; `UserService.createOrUpdateIncompleteUser` stores `referred_by`; when an admin verifies the new member
+(`UserService.updateStatus` to `Verified`) the referrer gets 20 karma (`member_referral`, once per referred member, silent, no notification).
+So points arrive on **verification**, not on sign-up. The bubble is the **only place that shows a member their own invite link**, and it exists
+only on the Home page (`app/(main)/page.tsx`). Consequences:
+- The app reads the code by briefly opening the hidden bubble on Home (invisible, then closes it). This is the interim.
+- When Home becomes the member dashboard (2.4) the bubble will not exist there, so `/api/app/v1/me` **must** return `referralCode` first (4.1), or
+  members lose their invite link. Put the invite link and a Copy/Share button on the dashboard too.
+- `/login` has a "Register Now" link that drops the `?code=` parameter. Pass `code`/`ref` through that link.
+Two shell fixes while there: the text hard-codes "COV – AIIMS Delhi" (use `SITE.name` and `SITE.instituteFull`, otherwise every institute's
   invitations name AIIMS Delhi), and `if (!typeof navigator) return;` is always false (it should be `typeof navigator === "undefined"`).
 
 Then in `app/globals.css`:

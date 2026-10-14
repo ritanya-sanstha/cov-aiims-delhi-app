@@ -227,6 +227,7 @@ export function siteInjectedScript(): string {
     var img = a ? a.querySelector('img') : null;
     var avatar = img ? avatarData(img) : '';
     var initials = a && !img ? (a.textContent || '').replace(/\\s+/g, '').slice(0, 2) : '';
+    signedIn = !!a;
     var admin = !!hdr.querySelector('a[href*="/admin"]');
     var unread = 0;
     var bells = document.querySelectorAll('a[href$="/notifications"] span');
@@ -241,6 +242,7 @@ export function siteInjectedScript(): string {
   }
   // The website's floating "Invite friends" button (fixed, small, round, share icon). The app offers sharing
   // from More (phone share sheet) instead, so hide it where it covers page text.
+  var shareEl = null, signedIn = false, invitePeeks = 0;
   function hideShareBubble() {
     if (!hideShare) return;
     var els = document.querySelectorAll('button.fixed, a.fixed, button[class*="fixed"]');
@@ -254,8 +256,41 @@ export function siteInjectedScript(): string {
       if (el.querySelector('.lucide-share-2, .lucide-share') || /invite|share/.test(label)) {
         el.style.setProperty('display', 'none', 'important');
         el.__shareHidden = true;
+        shareEl = el;
       }
     }
+  }
+  // The website shows a member's invite link (with their referral code, which earns them karma when the
+  // invited person is verified) only inside that bubble's dialog. Open the (hidden) bubble once, invisibly,
+  // read the code and close it again, so the app's Invite tile can share the same link.
+  function peekInviteCode() {
+    if (!hideShare || !shareEl || !signedIn || invitePeeks >= 3 || window.__invitePeeking || !document.contains(shareEl)) return;
+    invitePeeks++;
+    window.__invitePeeking = true;
+    var root = document.documentElement;
+    if (!document.getElementById('__peek_css')) {
+      var st = document.createElement('style');
+      st.id = '__peek_css';
+      st.textContent = 'html.__peek .fixed.inset-0{opacity:0!important;visibility:hidden!important;transition:none!important}';
+      (document.head || root).appendChild(st);
+    }
+    root.classList.add('__peek');
+    try { shareEl.click(); } catch (e) {}
+    setTimeout(function () {
+      var dialogs = document.querySelectorAll('.fixed.inset-0');
+      var found = '';
+      for (var i = dialogs.length - 1; i >= 0 && !found; i--) {
+        var m = /\\/register\\?code=([A-Za-z0-9_-]+)/.exec(dialogs[i].textContent || '');
+        if (m) found = m[1];
+      }
+      if (found) { invitePeeks = 3; post({ kind: 'invite', code: found }); }
+      // close it: the dialog's backdrop closes it when clicked
+      for (var j = 0; j < dialogs.length; j++) {
+        var back = dialogs[j].querySelector('.absolute.inset-0');
+        if (back) { try { back.click(); } catch (e2) {} }
+      }
+      setTimeout(function () { root.classList.remove('__peek'); window.__invitePeeking = false; }, 400);
+    }, 350);
   }
   function nativeHeaderRun() {
     if (!nativeHeader) return;
@@ -340,7 +375,7 @@ export function siteInjectedScript(): string {
     }
   }
 
-  function run() { markApp(); hideBottomBar(); hideShareBubble(); nativeHeaderRun(); compactHeaderTitle(); appFeel(); }
+  function run() { markApp(); hideBottomBar(); hideShareBubble(); nativeHeaderRun(); peekInviteCode(); compactHeaderTitle(); appFeel(); }
   run();
   var timer = null;
   new MutationObserver(function () {
@@ -368,8 +403,9 @@ function uploadReason(status: number): string {
 
 /** onMessage handler for site WebViews: shows why an upload failed. */
 export function handleSiteMessage(data: string): void {
-  let msg: { kind?: string; status?: number; path?: string; detail?: string; admin?: boolean; avatar?: string; initials?: string; unread?: number; signedIn?: boolean };
+  let msg: { kind?: string; status?: number; path?: string; detail?: string; admin?: boolean; avatar?: string; initials?: string; unread?: number; signedIn?: boolean; code?: string };
   try { msg = JSON.parse(data); } catch { return; }
+  if (msg.kind === 'invite' && msg.code) { setSiteChrome({ referralCode: msg.code }); return; }
   if (msg.kind === 'chrome') { setSiteChrome({ admin: !!msg.admin, avatar: msg.avatar || '', initials: msg.initials || '', unread: msg.unread || 0 }); return; }
   if (msg.kind !== 'upload-error') return;
   const now = Date.now();
