@@ -21,6 +21,8 @@ export interface MoreLink {
   icon: string;
   /** Website page opened inside the app */
   path: string;
+  /** "list" = row in the list card; default = tile in the grid */
+  group?: 'list';
 }
 
 export interface InstituteRegister {
@@ -56,6 +58,8 @@ export interface InstituteRegister {
     headerTitleFontPx?: number;
     /** Hide the website's page footer inside the app (its links are in More) */
     hideSiteFooter?: boolean;
+    /** Hide the website's floating "Invite friends" button (the app has its own invite in More) */
+    hideShareBubble?: boolean;
     /** Replace the website's floating header with the app's own top bar */
     nativeHeader?: boolean;
     /** Website paths (prefixes) where the website's own header is kept, e.g. admin */
@@ -66,8 +70,14 @@ export interface InstituteRegister {
   };
   branding: {
     logoFile: string;
+    /** Institute's main colour: copy of its website's primary (see docs/DESIGN.md) */
     primaryColor: string;
+    /** Small highlights (date badge, progress bar) */
     accentColor: string;
+    /** Info and category chips; defaults to primary */
+    secondaryColor?: string;
+    /** Unread badges and sign out; defaults to brick red */
+    alertColor?: string;
     statusBarStyle: 'light' | 'dark';
     splashBg: string;
     helplineColor: string;
@@ -83,6 +93,8 @@ export interface InstituteRegister {
     tagline2: string;
     memberIdPrefix: string;
     memberIdInstCode: string;
+    /** Shown under the institute name in the app, e.g. "Community of Volunteers" (common to all COV apps) */
+    programName?: string;
     poweredBy: string;
   };
 }
@@ -92,8 +104,8 @@ export const REGISTER: InstituteRegister =
     // Fallback for bare metro / local dev without REGISTER_FILE set
     institute: { name: 'COV – AIIMS Delhi', shortName: 'AIIMS Delhi', code: 'AD', tagline: 'Alumni Network', description: '' },
     app: { appName: 'AIIMS Delhi Alumni', bundleId: 'in.ritanyasanstha.aiimsdelhi', androidPackage: 'in.ritanyasanstha.aiimsdelhi', versionCode: 1, easProfileName: 'aiims-delhi' },
-    website: { baseUrl: 'https://aiimsdelhi.ritanyasanstha.in', loginPath: '/login', homePath: '/', authCheckPath: '/profile', profilePath: '/profile', signOutButtonText: 'Sign Out', hideSiteBottomNavMarkers: ['mentors', 'jobs'], contactEmail: 'contact@ritanyasanstha.org', headerTitleFontPx: 14, hideSiteFooter: true, nativeHeader: true, keepSiteHeaderPaths: ['/admin'], appUserAgentToken: 'COVApp', allowedDomains: ['aiimsdelhi.ritanyasanstha.in', 'ritanyasanstha.in'] },
-    branding: { logoFile: 'aiims-delhi-logo.png', primaryColor: '#1B2B5E', accentColor: '#C9A84C', statusBarStyle: 'light', splashBg: '#1B2B5E', helplineColor: '#EF4444' },
+    website: { baseUrl: 'https://aiimsdelhi.ritanyasanstha.in', loginPath: '/login', homePath: '/', authCheckPath: '/profile', profilePath: '/profile', signOutButtonText: 'Sign Out', hideSiteBottomNavMarkers: ['mentors', 'jobs'], contactEmail: 'contact@ritanyasanstha.org', headerTitleFontPx: 14, hideSiteFooter: true, hideShareBubble: true, nativeHeader: true, keepSiteHeaderPaths: ['/admin'], appUserAgentToken: 'COVApp', allowedDomains: ['aiimsdelhi.ritanyasanstha.in', 'ritanyasanstha.in'] },
+    branding: { logoFile: 'aiims-delhi-logo.png', primaryColor: '#2E4D23', accentColor: '#F9BF1F', secondaryColor: '#2E7BA3', alertColor: '#B54321', statusBarStyle: 'light', splashBg: '#2E4D23', helplineColor: '#EF4444' },
     navigation: {
       tabs: [
         { id: 'home', label: 'Home', icon: 'home', path: '/' },
@@ -104,7 +116,7 @@ export const REGISTER: InstituteRegister =
       ],
       more: [],
     },
-    standard: { ritanyaTreeLogo: true, tagline1: 'One Family — Every Stage of Life', tagline2: 'Help Others Celebrate Life', memberIdPrefix: 'AB', memberIdInstCode: 'AD', poweredBy: 'Ritanya Sanstha' },
+    standard: { ritanyaTreeLogo: true, tagline1: 'One Family — Every Stage of Life', tagline2: 'Help Others Celebrate Life', memberIdPrefix: 'AB', memberIdInstCode: 'AD', programName: 'Community of Volunteers', poweredBy: 'Ritanya Sanstha' },
   };
 
 /** Website path for a tab, from the register (never hardcode paths in screens) */

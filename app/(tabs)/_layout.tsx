@@ -12,10 +12,13 @@
  *   jobs      → /jobs
  *   more      → /more
  */
+import { useEffect } from 'react';
 import { Tabs } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { REGISTER } from '../../src/config';
+import { colors, fonts, shadow } from '../../src/theme';
+import { loadMe } from '../../src/api';
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -29,17 +32,20 @@ const ICON_MAP: Record<string, { outline: IoniconName; filled: IoniconName }> = 
   more:      { outline: 'ellipsis-horizontal-outline', filled: 'ellipsis-horizontal' },
 };
 
-const primary  = REGISTER.branding.primaryColor;  // '#1B2B5E'
-const inactive = '#9CA3AF';
+const primary  = colors.primary;
+const inactive = colors.textFaint;
 
 export default function TabsLayout() {
   const insets = useSafeAreaInsets();
+  // Who is signed in (photo, alerts count, invite code), if the website has the endpoint.
+  useEffect(() => { loadMe(); }, []);
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: primary,
         tabBarInactiveTintColor: inactive,
+        tabBarAllowFontScaling: false,
         // floating rounded bar, like the website's own bottom bar
         tabBarStyle: {
           position: 'relative',
@@ -50,17 +56,13 @@ export default function TabsLayout() {
           height: 64,
           paddingBottom: 8,
           paddingTop: 6,
-          backgroundColor: '#FFFFFF',
-          elevation: 8,
-          shadowColor: '#000',
-          shadowOpacity: 0.1,
-          shadowRadius: 12,
-          shadowOffset: { width: 0, height: 4 },
+          backgroundColor: colors.surface,
+          ...shadow.tabBar,
         },
         tabBarLabelStyle: {
+          fontFamily: fonts.bold,
           fontSize: 10,
-          fontWeight: '700',
-          letterSpacing: 0.6,
+          letterSpacing: 0.2,
           textTransform: 'uppercase',
         },
       }}

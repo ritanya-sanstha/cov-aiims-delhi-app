@@ -6,7 +6,6 @@
     "tagline": "Alumni Network",
     "description": "Community of Volunteers for AIIMS Delhi"
   },
-
   "app": {
     "appName": "AIIMS Delhi Alumni",
     "bundleId": "in.ritanyasanstha.aiimsdelhi",
@@ -14,7 +13,6 @@
     "versionCode": 1,
     "easProfileName": "aiims-delhi"
   },
-
   "website": {
     "baseUrl": "https://aiimsdelhi.ritanyasanstha.in",
     "loginPath": "/login",
@@ -22,59 +20,134 @@
     "authCheckPath": "/profile",
     "profilePath": "/profile",
     "signOutButtonText": "Sign Out",
-    "hideSiteBottomNavMarkers": ["mentors", "jobs"],
+    "hideSiteBottomNavMarkers": [
+      "mentors",
+      "jobs"
+    ],
     "contactEmail": "contact@ritanyasanstha.org",
     "headerTitleFontPx": 14,
     "hideSiteFooter": true,
+    "hideShareBubble": true,
     "nativeHeader": true,
-    "keepSiteHeaderPaths": ["/admin"],
+    "keepSiteHeaderPaths": [
+      "/admin"
+    ],
     "appUserAgentToken": "COVApp",
     "allowedDomains": [
       "aiimsdelhi.ritanyasanstha.in",
       "ritanyasanstha.in"
     ]
   },
-
   "branding": {
     "logoFile": "aiims-delhi-logo.png",
-    "primaryColor": "#1B2B5E",
-    "accentColor": "#C9A84C",
+    "primaryColor": "#2E4D23",
+    "accentColor": "#F9BF1F",
+    "secondaryColor": "#2E7BA3",
+    "alertColor": "#B54321",
     "statusBarStyle": "light",
-    "splashBg": "#1B2B5E",
+    "splashBg": "#2E4D23",
     "helplineColor": "#EF4444"
   },
-
   "navigation": {
     "tabs": [
-      { "id": "home",      "label": "Home",      "icon": "home",      "path": "/"          },
-      { "id": "helpline",  "label": "Helpline",  "icon": "heart",     "path": "/gethelp"   },
-      { "id": "directory", "label": "Directory", "icon": "people",    "path": "/alumni"    },
-      { "id": "jobs",      "label": "Jobs",      "icon": "briefcase", "path": "/jobs"      },
-      { "id": "more",      "label": "More",      "icon": "grid",      "native": true      }
+      {
+        "id": "home",
+        "label": "Home",
+        "icon": "home",
+        "path": "/"
+      },
+      {
+        "id": "helpline",
+        "label": "Helpline",
+        "icon": "heart",
+        "path": "/gethelp"
+      },
+      {
+        "id": "directory",
+        "label": "Directory",
+        "icon": "people",
+        "path": "/alumni"
+      },
+      {
+        "id": "jobs",
+        "label": "Jobs",
+        "icon": "briefcase",
+        "path": "/jobs"
+      },
+      {
+        "id": "more",
+        "label": "More",
+        "icon": "grid",
+        "native": true
+      }
     ],
     "more": [
-      { "label": "Profile & settings", "icon": "person-circle-outline",      "path": "/profile" },
-      { "label": "Alerts",             "icon": "notifications-outline",      "path": "/notifications" },
-      { "label": "Mentors",            "icon": "ear-outline",                "path": "/listeningear" },
-      { "label": "Volunteer",          "icon": "hand-left-outline",          "path": "/volunteer" },
-      { "label": "Learning Sessions",  "icon": "school-outline",             "path": "/sundaysessions" },
-      { "label": "Campaigns",          "icon": "megaphone-outline",          "path": "/campaigns" },
-      { "label": "Communities",        "icon": "people-circle-outline",      "path": "/communities" },
-      { "label": "Matrimonial",        "icon": "heart-circle-outline",       "path": "/matrimonial" },
-      { "label": "Flatmates Finder",   "icon": "home-outline",               "path": "/flatmates" },
-      { "label": "About",              "icon": "information-circle-outline", "path": "/about" },
-      { "label": "FAQ",                "icon": "help-circle-outline",        "path": "/faq" },
-      { "label": "Privacy Policy",     "icon": "shield-checkmark-outline",   "path": "/privacy-policy" },
-      { "label": "Terms & Conditions", "icon": "document-text-outline",      "path": "/terms" }
+      {
+        "label": "Mentors",
+        "icon": "ear-outline",
+        "path": "/listeningear"
+      },
+      {
+        "label": "Volunteer",
+        "icon": "hand-left-outline",
+        "path": "/volunteer"
+      },
+      {
+        "label": "Learning Sessions",
+        "icon": "school-outline",
+        "path": "/sundaysessions"
+      },
+      {
+        "label": "Campaigns",
+        "icon": "megaphone-outline",
+        "path": "/campaigns"
+      },
+      {
+        "label": "Communities",
+        "icon": "people-circle-outline",
+        "path": "/communities"
+      },
+      {
+        "label": "Matrimonial",
+        "icon": "heart-circle-outline",
+        "path": "/matrimonial"
+      },
+      {
+        "label": "Flatmates Finder",
+        "icon": "home-outline",
+        "path": "/flatmates"
+      },
+      {
+        "label": "About",
+        "icon": "information-circle-outline",
+        "path": "/about"
+      },
+      {
+        "label": "FAQ",
+        "icon": "help-circle-outline",
+        "path": "/faq"
+      },
+      {
+        "label": "Privacy Policy",
+        "icon": "shield-checkmark-outline",
+        "path": "/privacy-policy",
+        "group": "list"
+      },
+      {
+        "label": "Terms & Conditions",
+        "icon": "document-text-outline",
+        "path": "/terms",
+        "group": "list"
+      }
     ]
   },
-
   "standard": {
     "ritanyaTreeLogo": true,
     "tagline1": "One Family — Every Stage of Life",
     "tagline2": "Help Others Celebrate Life",
     "memberIdPrefix": "AB",
     "memberIdInstCode": "AD",
+    "programName": "Community of Volunteers",
     "poweredBy": "Ritanya Sanstha"
   }
 }

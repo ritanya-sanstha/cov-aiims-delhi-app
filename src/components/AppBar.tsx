@@ -1,8 +1,8 @@
 /**
- * src/components/AppBar.tsx — the app's own top bar for the tab screens.
- * Replaces the website's floating header (hidden by siteScripts) with the same
- * kind of floating white card: logo + title on the left; alerts, profile and
- * (for admins) admin panel on the right.
+ * src/components/AppBar.tsx — the app's own top bar (floating white card).
+ * Tab screens: logo + institute/screen title + alerts, profile and (admins) admin panel.
+ * Pages opened from there: a Back chevron instead of the logo and actions.
+ * Look: docs/DESIGN.md.
  */
 import { useEffect, useState } from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -11,26 +11,29 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { REGISTER } from '../config';
 import { getSiteChrome, subscribeSiteChrome } from '../session';
+import { colors, fonts, shadow } from '../theme';
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 
-export const APP_BG = '#F2F3F7';
-const LOGO = require('../../assets/logos/aiims-delhi-logo.png');
+export const APP_BG = colors.ground;
+// assets/brand/logo.png is the register's logo (scripts/apply-branding.js copies it there)
+const LOGO = require('../../assets/brand/logo.png');
 
-export default function AppBar({ title }: { title: string }) {
+export default function AppBar({ title, subtitle, onBack }: { title: string; subtitle?: string; onBack?: () => void }) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { primaryColor } = REGISTER.branding;
   const [chrome, setChrome] = useState(getSiteChrome());
   useEffect(() => subscribeSiteChrome(setChrome), []);
-  const { admin, avatar, initials } = chrome;
+  const { admin, avatar, initials, unread } = chrome;
+
+  const open = (path: string, label: string) =>
+    router.push({ pathname: '/page', params: { path, title: label } });
 
   const Action = ({ icon, label, path }: { icon: IoniconName; label: string; path: string }) => (
     <TouchableOpacity
-      onPress={() => router.push({ pathname: '/page', params: { path, title: label } })}
+      onPress={() => open(path, label)}
       accessibilityRole="button"
       accessibilityLabel={label}
-      hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
       style={styles.action}
     >
       <Ionicons name={icon} size={24} color="#4B5563" />
@@ -40,24 +43,44 @@ export default function AppBar({ title }: { title: string }) {
   return (
     <View style={[styles.wrap, { paddingTop: insets.top + 8 }]}>
       <View style={styles.card}>
-        <Image source={LOGO} style={styles.logo} />
-        <Text style={[styles.title, { color: primaryColor }]} numberOfLines={1}>{title}</Text>
-        {admin && <Action icon="shield-checkmark-outline" label="Admin panel" path="/admin" />}
-        <Action icon="notifications-outline" label="Alerts" path="/notifications" />
-        <TouchableOpacity
-          onPress={() => router.push({ pathname: '/page', params: { path: REGISTER.website.profilePath, title: 'Profile' } })}
-          accessibilityRole="button"
-          accessibilityLabel="Profile"
-          style={styles.action}
-        >
-          {avatar ? (
-            <Image source={{ uri: avatar }} style={styles.avatar} />
-          ) : initials ? (
-            <View style={[styles.avatar, styles.initials]}><Text style={styles.initialsText}>{initials}</Text></View>
-          ) : (
-            <Ionicons name="person-circle-outline" size={30} color="#4B5563" />
-          )}
-        </TouchableOpacity>
+        {onBack ? (
+          <TouchableOpacity onPress={onBack} accessibilityRole="button" accessibilityLabel="Back" style={styles.back}>
+            <Ionicons name="chevron-back" size={24} color={colors.primary} />
+          </TouchableOpacity>
+        ) : (
+          <Image source={LOGO} style={styles.logo} />
+        )}
+        <View style={styles.titles}>
+          <Text style={styles.title} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{title}</Text>
+          {!!subtitle && <Text style={styles.subtitle} numberOfLines={1}>{subtitle}</Text>}
+        </View>
+        {!onBack && admin && <Action icon="shield-checkmark-outline" label="Admin panel" path="/admin" />}
+        {!onBack && (
+          <View>
+            <Action icon="notifications-outline" label={unread > 0 ? `Alerts, ${unread} unread` : 'Alerts'} path="/notifications" />
+            {unread > 0 && (
+              <View pointerEvents="none" style={styles.badge}>
+                <Text style={styles.badgeText}>{unread > 99 ? '99+' : unread}</Text>
+              </View>
+            )}
+          </View>
+        )}
+        {!onBack && (
+          <TouchableOpacity
+            onPress={() => open(REGISTER.website.profilePath, 'Profile')}
+            accessibilityRole="button"
+            accessibilityLabel="Profile"
+            style={styles.action}
+          >
+            {avatar ? (
+              <Image source={{ uri: avatar }} style={styles.avatar} />
+            ) : (
+              <View style={[styles.avatar, styles.initials]}>
+                <Text style={styles.initialsText}>{initials || ''}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+        )}
       </View>
     </View>
   );
@@ -68,21 +91,22 @@ const styles = StyleSheet.create({
   card: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
     borderRadius: 20,
     paddingVertical: 8,
     paddingHorizontal: 12,
-    gap: 6,
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOpacity: 0.08,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 3 },
+    gap: 4,
+    ...shadow.bar,
   },
-  logo: { width: 36, height: 36, borderRadius: 18, marginRight: 4 },
-  title: { flex: 1, fontSize: 18, fontWeight: '800', letterSpacing: -0.2 },
-  action: { padding: 6 },
-  avatar: { width: 32, height: 32, borderRadius: 16, borderWidth: 1, borderColor: '#D1D5DB' },
-  initials: { backgroundColor: '#0D9488', alignItems: 'center', justifyContent: 'center', borderColor: '#0D9488' },
-  initialsText: { color: '#fff', fontSize: 13, fontWeight: '700' },
+  logo: { width: 36, height: 36, borderRadius: 18, marginRight: 6 },
+  back: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', marginVertical: -4, marginLeft: -4, marginRight: 4, backgroundColor: colors.ground },
+  titles: { flex: 1 },
+  title: { fontFamily: fonts.title, fontSize: 18, letterSpacing: -0.2, color: colors.primary },
+  subtitle: { fontFamily: fonts.regular, fontSize: 11, color: colors.textMuted, marginTop: 1 },
+  action: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  badge: { position: 'absolute', top: 5, right: 5, minWidth: 16, height: 16, borderRadius: 8, paddingHorizontal: 4, backgroundColor: colors.alert, alignItems: 'center', justifyContent: 'center' },
+  badgeText: { fontFamily: fonts.bold, color: '#FFFFFF', fontSize: 10 },
+  avatar: { width: 36, height: 36, borderRadius: 18 },
+  initials: { backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' },
+  initialsText: { fontFamily: fonts.bold, color: '#FFFFFF', fontSize: 13 },
 });

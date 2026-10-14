@@ -37,6 +37,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Apply register branding (logo)
+        run: node scripts/apply-branding.js
+        env:
+          REGISTER_FILE: ./registers/aiims-delhi.register.json
+
       - name: Type check
         run: npx tsc --noEmit
 
@@ -83,13 +88,23 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
-      - name: Publish GitHub Release (public download link)
+      - name: Publish GitHub Releases (archive of this build + latest link)
         run: |
           APK=android/app/build/outputs/apk/release/app-release.apk
+          N=${{ github.run_number }}
+          # 1. Archive: one release per build, kept until someone deletes it
+          #    (gh release delete build-N --cleanup-tag). Never replaced by later builds.
+          cp "$APK" "aiims-delhi-build-$N.apk"
+          gh release create "build-$N" "aiims-delhi-build-$N.apk" \
+            --target "$GITHUB_SHA" \
+            --title "Build #$N" \
+            --notes "Android APK. Build $N, commit ${GITHUB_SHA::7}, $(date -u +%Y-%m-%d\ %H:%M) UTC." \
+            --latest=false || echo "::warning::archive release build-$N was not created (already exists?); continuing"
+          # 2. Moving pointer: the newest build at a stable link
           gh release delete latest-build --yes --cleanup-tag 2>/dev/null || true
           gh release create latest-build "$APK" \
-            --title "Latest Build (#${{ github.run_number }})" \
-            --notes "Android APK. Build ${{ github.run_number }}, commit ${GITHUB_SHA::7}." \
+            --title "Latest Build (#$N)" \
+            --notes "Android APK. Build $N, commit ${GITHUB_SHA::7}. Every build is kept as release build-$N." \
             --latest
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

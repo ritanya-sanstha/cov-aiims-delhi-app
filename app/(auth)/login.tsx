@@ -11,15 +11,18 @@
  *  - The HttpOnly session cookie is set by the website's server response
  *    and lives in the system WebView cookie jar (inaccessible to JS)
  */
-import { useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { StyleSheet, View, ActivityIndicator } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import WebView, { WebViewNavigation } from 'react-native-webview';
 import { appUserAgent } from '../../src/siteScripts';
 import { isLoggedIn } from '../../src/auth';
 import { REGISTER, siteUrl, isAllowedUrl } from '../../src/config';
 import { setLandingUrl } from '../../src/session';
+import { APP_BG } from '../../src/components/AppBar';
+import { colors } from '../../src/theme';
 
 // Extra space (dp) between the status bar and the website's login page.
 const LOGIN_TOP_GAP = 28;
@@ -29,10 +32,10 @@ export default function LoginScreen() {
   const insets = useSafeAreaInsets();
   const webViewRef = useRef<WebView>(null);
   const [loading, setLoading] = useState(true);
+  const [focused, setFocused] = useState(false);
+  useFocusEffect(useCallback(() => { setFocused(true); return () => setFocused(false); }, []));
 
   const loginUrl = siteUrl(REGISTER.website.loginPath);
-  const primary = REGISTER.branding.primaryColor;
-  const accent = REGISTER.branding.accentColor;
 
   // The page can leave /login without a login (logo, Register, Forgot password...), so
   // moving to another URL proves nothing: confirm with the website that we are signed in.
@@ -75,10 +78,11 @@ export default function LoginScreen() {
   }
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top + LOGIN_TOP_GAP, backgroundColor: primary }]}>
+    <View style={[styles.container, { paddingTop: insets.top + LOGIN_TOP_GAP }]}>
+      {focused && <StatusBar style="dark" />}
       {loading && (
-        <View style={[styles.loader, { backgroundColor: primary }]}>
-          <ActivityIndicator size="large" color={accent} />
+        <View style={styles.loader}>
+          <ActivityIndicator size="large" color={colors.primary} />
         </View>
       )}
       <WebView
@@ -111,7 +115,7 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: APP_BG,
   },
   webview: {
     flex: 1,
@@ -119,6 +123,7 @@ const styles = StyleSheet.create({
   },
   loader: {
     ...StyleSheet.absoluteFillObject,
+    backgroundColor: APP_BG,
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 10,

@@ -14,6 +14,9 @@ import { useEffect, useState } from 'react';
 import { Stack, useRouter, useSegments, useRootNavigationState } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { View, ActivityIndicator } from 'react-native';
+import { useFonts } from 'expo-font';
+import { PlusJakartaSans_700Bold, PlusJakartaSans_800ExtraBold } from '@expo-google-fonts/plus-jakarta-sans';
+import { Geist_400Regular, Geist_500Medium, Geist_600SemiBold, Geist_700Bold } from '@expo-google-fonts/geist';
 import { REGISTER } from '../src/config';
 import { isLoggedIn } from '../src/auth';
 
@@ -21,6 +24,16 @@ type AuthState = 'loading' | 'loggedIn' | 'loggedOut';
 
 export default function RootLayout() {
   const [authState, setAuthState] = useState<AuthState>('loading');
+  // Same typefaces as the website. If loading fails the app still starts with the system font.
+  const [fontsLoaded, fontError] = useFonts({
+    PlusJakartaSans_700Bold,
+    PlusJakartaSans_800ExtraBold,
+    Geist_400Regular,
+    Geist_500Medium,
+    Geist_600SemiBold,
+    Geist_700Bold,
+  });
+  const fontsReady = fontsLoaded || !!fontError;
   const router = useRouter();
   const segments = useSegments();
   const navState = useRootNavigationState();
@@ -48,7 +61,7 @@ export default function RootLayout() {
     setAuthState((await isLoggedIn(5000)) ? 'loggedIn' : 'loggedOut');
   }
 
-  if (authState === 'loading') {
+  if (authState === 'loading' || !fontsReady) {
     return (
       <View style={{ flex: 1, backgroundColor: REGISTER.branding.splashBg, justifyContent: 'center', alignItems: 'center' }}>
         <StatusBar style={REGISTER.branding.statusBarStyle} />

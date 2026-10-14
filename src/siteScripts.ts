@@ -35,6 +35,7 @@ export function siteInjectedScript(): string {
   const fontPx = REGISTER.website.headerTitleFontPx ?? 14;
   const hideFooter = REGISTER.website.hideSiteFooter ?? false;
   const nativeHeader = REGISTER.website.nativeHeader ?? false;
+  const hideShare = REGISTER.website.hideShareBubble ?? false;
   const keepPaths = REGISTER.website.keepSiteHeaderPaths ?? [];
   return `
 (function () {
@@ -45,6 +46,7 @@ export function siteInjectedScript(): string {
   var fontPx = ${JSON.stringify(fontPx)};
   var hideFooter = ${JSON.stringify(hideFooter)};
   var nativeHeader = ${JSON.stringify(nativeHeader)};
+  var hideShare = ${JSON.stringify(hideShare)};
   var keepPaths = ${JSON.stringify(keepPaths)};
 
   // --- tell the page it is inside the app ---
@@ -107,7 +109,7 @@ export function siteInjectedScript(): string {
   }
 
   // --- native header: hide the website's floating header, trim the gap ---
-  var hdr = null, trimPath = null, trims = 0, lastTrim = 0, chromeSig = '';
+  var hdr = null, hdrBottom = 0, trimPath = null, trims = 0, lastTrim = 0, chromeSig = '';
   function headerKept() {
     var p = location.pathname;
     for (var i = 0; i < keepPaths.length; i++) {
@@ -128,15 +130,16 @@ export function siteInjectedScript(): string {
     }
     return null;
   }
-  // Page-top (px) of the first visible content that is not part of a fixed/sticky bar.
+  // First visible content that is not part of a fixed/sticky bar: { top: page-top px, el }.
   function firstContentTop() {
-    var fixedList = [], best = Infinity;
+    var fixedList = [], best = Infinity, bestEl = null;
     var all = document.body ? document.body.querySelectorAll('*') : [];
     for (var i = 0; i < all.length; i++) {
       var el = all[i], tag = el.tagName;
       if (tag === 'SCRIPT' || tag === 'STYLE' || tag === 'NOSCRIPT') continue;
       var pos = getComputedStyle(el).position;
-      if (pos === 'fixed' || pos === 'sticky') { fixedList.push(el); continue; }
+      // fixed/sticky bars and absolutely positioned decoration (hero background photos...) are not content
+      if (pos === 'fixed' || pos === 'sticky' || pos === 'absolute') { fixedList.push(el); continue; }
       var inFixed = false;
       for (var f = 0; f < fixedList.length; f++) { if (fixedList[f].contains(el)) { inFixed = true; break; } }
       if (inFixed) continue;
@@ -146,23 +149,66 @@ export function siteInjectedScript(): string {
       var r = el.getBoundingClientRect();
       if (r.width === 0 || r.height === 0) continue;
       var top = r.top + window.pageYOffset;
-      if (top < best) best = top;
+      if (top < best) { best = top; bestEl = el; }
     }
-    return best;
+    return { top: best, el: bestEl };
   }
-  // The hidden header leaves its reserved space empty: pull the page up (a few
-  // tries per page, content renders after load).
+  // The hidden header leaves its reserved space empty at the top of the page. Close the gap
+  // by reducing the top padding/margin of the first content's ancestors (never below zero, so
+  // nothing can end up above the start of the page and become unreachable). A few tries per
+  // page, because content renders after load.
+  var trimmed = [];
+  function undoTrim() {
+    for (var i = 0; i < trimmed.length; i++) {
+      var t = trimmed[i];
+      if (t.prev) t.el.style.setProperty(t.prop, t.prev, t.prio); else t.el.style.removeProperty(t.prop);
+      t.el.__stickyDone = false;
+    }
+    trimmed = [];
+  }
   function trimTop() {
     var path = location.pathname;
-    if (trimPath !== path) { trimPath = path; trims = 0; }
+    if (trimPath !== path) { undoTrim(); trimPath = path; trims = 0; }
     var now = Date.now();
-    if (trims >= 4 || now - lastTrim < 500 || !document.body) return;
+    if (trims >= 6 || now - lastTrim < 700 || !document.body) return;
     trims++; lastTrim = now;
-    var b = document.body.style;
-    b.setProperty('margin-top', '0px', 'important');
-    var top = firstContentTop();
-    var shift = top - 12;
-    if (isFinite(top) && shift > 0) b.setProperty('margin-top', (-shift) + 'px', 'important');
+    undoTrim();
+    fixStickyOffsets();
+    var f = firstContentTop();
+    var left = f.top - 12;
+    if (!f.el || !isFinite(f.top) || left <= 0) return;
+    var chain = [];
+    for (var n = f.el; n && n !== document.documentElement; n = n.parentElement) chain.unshift(n);
+    for (var k = 0; k < chain.length && left > 0; k++) {
+      var cs = getComputedStyle(chain[k]);
+      var props = ['padding-top', 'margin-top'];
+      for (var q = 0; q < props.length && left > 0; q++) {
+        var v = parseFloat(cs.getPropertyValue(props[q])) || 0;
+        if (v <= 0) continue;
+        var cut = Math.min(v, left);
+        var st = chain[k].style;
+        trimmed.push({ el: chain[k], prop: props[q], prev: st.getPropertyValue(props[q]), prio: st.getPropertyPriority(props[q]) });
+        st.setProperty(props[q], (v - cut) + 'px', 'important');
+        left -= cut;
+      }
+    }
+  }
+  // Sticky bars pinned below the (now hidden) header, e.g. "sticky top-16": pull them up to the top.
+  function fixStickyOffsets() {
+    if (!hdrBottom) return;
+    var els = document.body ? document.body.querySelectorAll('*') : [];
+    for (var i = 0; i < els.length; i++) {
+      var el = els[i];
+      if (el === hdr || (hdr && hdr.contains(el)) || el.__stickyDone) continue;
+      var cs = getComputedStyle(el);
+      if (cs.position !== 'sticky') continue;
+      var top = parseFloat(cs.top);
+      if (!isFinite(top) || top <= 0 || top > 200) continue;
+      el.__stickyDone = true;
+      var st = el.style;
+      trimmed.push({ el: el, prop: 'top', prev: st.getPropertyValue('top'), prio: st.getPropertyPriority('top') });
+      st.setProperty('top', Math.max(0, top - hdrBottom) + 'px', 'important');
+    }
   }
   // Tell the app who is signed in (admin link, profile photo / initials) from the header it hides.
   function avatarData(img) {
@@ -181,23 +227,83 @@ export function siteInjectedScript(): string {
     var img = a ? a.querySelector('img') : null;
     var avatar = img ? avatarData(img) : '';
     var initials = a && !img ? (a.textContent || '').replace(/\\s+/g, '').slice(0, 2) : '';
+    signedIn = !!a;
     var admin = !!hdr.querySelector('a[href*="/admin"]');
-    var sig = admin + '|' + initials + '|' + avatar.length + avatar.slice(-24);
+    var unread = 0;
+    var bells = document.querySelectorAll('a[href$="/notifications"] span');
+    for (var b = 0; b < bells.length; b++) {
+      var m = /^(\\d+)\\+?$/.exec((bells[b].textContent || '').trim());
+      if (m) { unread = parseInt(m[1], 10); break; }
+    }
+    var sig = admin + '|' + initials + '|' + unread + '|' + avatar.length + avatar.slice(-24);
     if (sig === chromeSig) return;
     chromeSig = sig;
-    post({ kind: 'chrome', admin: admin, avatar: avatar, initials: initials, signedIn: !!a });
+    post({ kind: 'chrome', admin: admin, avatar: avatar, initials: initials, unread: unread, signedIn: !!a });
+  }
+  // The website's floating "Invite friends" button (fixed, small, round, share icon). The app offers sharing
+  // from More (phone share sheet) instead, so hide it where it covers page text.
+  var shareEl = null, signedIn = false, invitePeeks = 0;
+  function hideShareBubble() {
+    if (!hideShare) return;
+    var els = document.querySelectorAll('button.fixed, a.fixed, button[class*="fixed"]');
+    for (var i = 0; i < els.length; i++) {
+      var el = els[i];
+      if (el.__shareHidden) continue;
+      if (getComputedStyle(el).position !== 'fixed') continue;
+      var r = el.getBoundingClientRect();
+      if (r.width === 0 || r.width > 220 || r.height > 80 || r.top < window.innerHeight / 2) continue;
+      var label = ((el.getAttribute('aria-label') || '') + ' ' + (el.textContent || '')).toLowerCase();
+      if (el.querySelector('.lucide-share-2, .lucide-share') || /invite|share/.test(label)) {
+        el.style.setProperty('display', 'none', 'important');
+        el.__shareHidden = true;
+        shareEl = el;
+      }
+    }
+  }
+  // The website shows a member's invite link (with their referral code, which earns them karma when the
+  // invited person is verified) only inside that bubble's dialog. Open the (hidden) bubble once, invisibly,
+  // read the code and close it again, so the app's Invite tile can share the same link.
+  function peekInviteCode() {
+    if (!hideShare || !shareEl || !signedIn || invitePeeks >= 3 || window.__invitePeeking || !document.contains(shareEl)) return;
+    invitePeeks++;
+    window.__invitePeeking = true;
+    var root = document.documentElement;
+    if (!document.getElementById('__peek_css')) {
+      var st = document.createElement('style');
+      st.id = '__peek_css';
+      st.textContent = 'html.__peek .fixed.inset-0{opacity:0!important;visibility:hidden!important;transition:none!important}';
+      (document.head || root).appendChild(st);
+    }
+    root.classList.add('__peek');
+    try { shareEl.click(); } catch (e) {}
+    setTimeout(function () {
+      var dialogs = document.querySelectorAll('.fixed.inset-0');
+      var found = '';
+      for (var i = dialogs.length - 1; i >= 0 && !found; i--) {
+        var m = /\\/register\\?code=([A-Za-z0-9_-]+)/.exec(dialogs[i].textContent || '');
+        if (m) found = m[1];
+      }
+      if (found) { invitePeeks = 3; post({ kind: 'invite', code: found }); }
+      // close it: the dialog's backdrop closes it when clicked
+      for (var j = 0; j < dialogs.length; j++) {
+        var back = dialogs[j].querySelector('.absolute.inset-0');
+        if (back) { try { back.click(); } catch (e2) {} }
+      }
+      setTimeout(function () { root.classList.remove('__peek'); window.__invitePeeking = false; }, 400);
+    }, 350);
   }
   function nativeHeaderRun() {
     if (!nativeHeader) return;
     if (headerKept()) {
       if (hdr) { hdr.style.removeProperty('display'); hdr = null; chromeSig = ''; }
-      if (document.body) document.body.style.removeProperty('margin-top');
+      undoTrim();
       trimPath = null;
       return;
     }
     if (!hdr || !document.contains(hdr)) {
       hdr = findHeader();
       if (!hdr) return;
+      hdrBottom = Math.round(hdr.getBoundingClientRect().bottom);
     }
     reportChrome();
     if (hdr.style.getPropertyValue('display') !== 'none') hdr.style.setProperty('display', 'none', 'important');
@@ -269,7 +375,7 @@ export function siteInjectedScript(): string {
     }
   }
 
-  function run() { markApp(); hideBottomBar(); nativeHeaderRun(); compactHeaderTitle(); appFeel(); }
+  function run() { markApp(); hideBottomBar(); hideShareBubble(); nativeHeaderRun(); peekInviteCode(); compactHeaderTitle(); appFeel(); }
   run();
   var timer = null;
   new MutationObserver(function () {
@@ -297,9 +403,10 @@ function uploadReason(status: number): string {
 
 /** onMessage handler for site WebViews: shows why an upload failed. */
 export function handleSiteMessage(data: string): void {
-  let msg: { kind?: string; status?: number; path?: string; detail?: string; admin?: boolean; avatar?: string; initials?: string; signedIn?: boolean };
+  let msg: { kind?: string; status?: number; path?: string; detail?: string; admin?: boolean; avatar?: string; initials?: string; unread?: number; signedIn?: boolean; code?: string };
   try { msg = JSON.parse(data); } catch { return; }
-  if (msg.kind === 'chrome') { setSiteChrome({ admin: !!msg.admin, avatar: msg.avatar || '', initials: msg.initials || '' }); return; }
+  if (msg.kind === 'invite' && msg.code) { setSiteChrome({ referralCode: msg.code }); return; }
+  if (msg.kind === 'chrome') { setSiteChrome({ admin: !!msg.admin, avatar: msg.avatar || '', initials: msg.initials || '', unread: msg.unread || 0 }); return; }
   if (msg.kind !== 'upload-error') return;
   const now = Date.now();
   if (now - lastUploadAlert < 5000) return;
