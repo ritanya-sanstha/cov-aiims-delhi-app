@@ -70,6 +70,9 @@ New institute = new register + logo + one workflow `REGISTER_FILE`, nothing else
   version (API-backed, fast) is planned after the web-wrapped look is solid; it needs `/api/app/v1/*` endpoints
   added to each institute's website repo (website changes only via PRs the owner merges).
 
+## Design
+Design system and every screen: `docs/DESIGN.md` (Claude Design canvas linked there). Follow it for any UI change.
+
 ## Open items
 - Website: publish `assetlinks.json`; fix `/api/upload` (HTTP 500 "Failed to upload file", owner is on it);
   serve an app layout when the `COVApp` user agent is present.
