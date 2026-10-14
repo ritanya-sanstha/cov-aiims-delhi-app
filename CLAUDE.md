@@ -49,7 +49,7 @@ New institute = new register + logo + one workflow `REGISTER_FILE`, nothing else
 
 ## Build and release
 - Only GitHub Actions (`.github/workflows/android-build.yml`); no EAS. Push to `main` builds (about 15 min),
-  publishes the APK to the `latest-build` release. Never patch generated native code in the workflow; fix
+  publishes the APK to the `latest-build` release (moving) and also keeps it as its own release `build-<N>` (archive; delete old ones with `gh release delete build-N --cleanup-tag`). Never patch generated native code in the workflow; fix
   `package.json` / `app.config.js` instead.
 - Signed with the template debug keystore (stable fingerprint in `docs/assetlinks.json`). Play Store needs a real upload key.
 - The user merges PRs (the assistant never merges) and tests on a real phone (Pixel).
