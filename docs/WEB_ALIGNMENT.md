@@ -181,7 +181,17 @@ Per institute `cov-<inst>`, on a branch from its `staging`:
 4. Run: `bun install --frozen-lockfile`, `bunx tsc --noEmit`, the tests folder by folder (playbook section 7).
 5. Deploy to staging, test in app mode (section 7), then merge to `main`.
 Never touch another institute's cloud project; the deploy guard in `scripts/deploy.sh` exists for this reason.
-Order: AIIMS Delhi (reference), IIT Roorkee (AlumBond), IIT Delhi, IIT Kanpur, then the rest in batches of three.
+**Roll-out order (decided by the owner):** AIIMS Delhi first (live but not launched), then IIT Delhi (live but not launched).
+Only when both are working and tested go to **IIT Roorkee (AlumBond): a real live site with about 6000 members**, then the
+rest in batches. Experiments are allowed on AIIMS Delhi and IIT Delhi; IIT Roorkee gets nothing that has not already run on both.
+
+Risk tiers, so Roorkee is never surprised:
+- **Tier A, app mode (sections 2 and 4.1/4.3):** everything is gated by the `COVApp` user agent or is a new endpoint. A normal visitor's
+  page is byte-for-byte the same (except the added CSS classes and variables, which have no effect without `data-app`). Low risk.
+- **Tier B, section 2.3 (spacing variables) and section 3 (mobile browser look):** these change what every visitor sees. Test on
+  staging with screenshots at 360, 390 and 430 px wide, signed in and out, before Roorkee. Roll out Tier B to Roorkee separately, later,
+  and only if the owner wants it.
+- Always deploy to the institute's `staging` first. Never push to Roorkee `main` on a Friday evening or without the owner watching.
 
 ## 7. Verification checklist (per site, staging)
 With the user agent set to `COVApp/1.0.0` (or the app pointed at staging):
@@ -204,4 +214,4 @@ Screenshots of each page in both modes go in the PR.
 6. Section 4.4 and native screens: a screen at a time after the above.
 
 Open decisions for the owner: keep or remove the share bubble in the app; whether the app home is the dashboard (recommended) or
-the marketing page; which institute after AIIMS Delhi goes first.
+the marketing page; (answered: IIT Delhi second, IIT Roorkee last, see section 6).

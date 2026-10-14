@@ -70,6 +70,11 @@ New institute = new register + logo + one workflow `REGISTER_FILE`, nothing else
   version (API-backed, fast) is planned after the web-wrapped look is solid; it needs `/api/app/v1/*` endpoints
   added to each institute's website repo (website changes only via PRs the owner merges).
 
+## Roll-out order and safety
+AIIMS Delhi (live, not launched) first, then IIT Delhi (live, not launched). IIT Roorkee (AlumBond) is a real live site with about
+6000 members: touch it only after both have been tested, staging first, and only with changes that already ran on both.
+Tier A (UA-gated app mode) is low risk; changes visible to every visitor (Tier B) need screenshots and the owner's go. See `docs/WEB_ALIGNMENT.md`.
+
 ## Design
 Design system and every screen: `docs/DESIGN.md` (Claude Design canvas linked there). Follow it for any UI change.
 
