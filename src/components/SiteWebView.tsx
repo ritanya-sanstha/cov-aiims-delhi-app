@@ -35,11 +35,12 @@ import {
 import WebView, { WebViewNavigation } from 'react-native-webview';
 import type { WebViewErrorEvent } from 'react-native-webview/lib/WebViewTypes';
 import { useFocusEffect, useRouter } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { REGISTER, siteUrl, isAllowedUrl } from '../config';
 import { appUserAgent, handleSiteMessage, siteInjectedScript } from '../siteScripts';
-import AppBar from './AppBar';
+import AppBar, { APP_BG } from './AppBar';
 
 const HIDE_SITE_NAV_JS = siteInjectedScript();
 
@@ -53,6 +54,15 @@ interface Props {
 
 export default function SiteWebView({ path, title }: Props) {
   const router = useRouter();
+  const [focused, setFocused] = useState(false);
+  const loadedAt = useRef(0);
+  useFocusEffect(useCallback(() => {
+    setFocused(true);
+    // Coming back to a tab that has been away a while: reload, so the page reflects the
+    // current login state and data (otherwise it can keep showing e.g. "Register").
+    if (loadedAt.current && Date.now() - loadedAt.current > 60_000) webViewRef.current?.reload();
+    return () => setFocused(false);
+  }, []));
   const insets = useSafeAreaInsets();
   const webViewRef = useRef<WebView>(null);
   const canGoBack = useRef(false);
@@ -132,7 +142,8 @@ export default function SiteWebView({ path, title }: Props) {
   }
 
   return (
-    <View style={[styles.container, { paddingTop: nativeBar ? 0 : insets.top, backgroundColor: nativeBar ? '#FFFFFF' : primary }]}>
+    <View style={[styles.container, { paddingTop: nativeBar ? 0 : insets.top, backgroundColor: nativeBar ? APP_BG : primary }]}>
+      {nativeBar && focused && <StatusBar style="dark" />}
       {nativeBar && <AppBar title={title!} />}
       {initialLoading && (
         <View style={[styles.loader, { backgroundColor: primary }]}>
@@ -154,7 +165,7 @@ export default function SiteWebView({ path, title }: Props) {
         onShouldStartLoadWithRequest={handleShouldStartLoadWithRequest}
         onError={handleError}
         onLoadProgress={({ nativeEvent }) => setProgress(nativeEvent.progress)}
-        onLoadEnd={() => { setInitialLoading(false); setProgress(0); }}
+        onLoadEnd={() => { setInitialLoading(false); setProgress(0); loadedAt.current = Date.now(); }}
         // Cookie sharing — critical for twin-login
         sharedCookiesEnabled
         thirdPartyCookiesEnabled

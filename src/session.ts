@@ -12,6 +12,7 @@ export function setLandingUrl(url: string): void {
 
 export function clearLandingUrl(): void {
   landingUrl = null;
+  setSiteChrome(EMPTY_CHROME); // signed out: forget the previous member's photo
 }
 
 /** Path (+query) of the post-login landing page, or the given default. */
@@ -25,21 +26,23 @@ export function getHomePath(defaultPath: string): string {
   }
 }
 
-// --- the website header said the member is an admin (it has an Admin Panel link) ---
-let siteAdmin = false;
-const adminListeners = new Set<(v: boolean) => void>();
+// --- who the website header says is signed in (admin link, profile photo / initials) ---
+export interface SiteChrome { admin: boolean; avatar: string; initials: string }
+const EMPTY_CHROME: SiteChrome = { admin: false, avatar: '', initials: '' };
+let siteChrome: SiteChrome = EMPTY_CHROME;
+const chromeListeners = new Set<(c: SiteChrome) => void>();
 
-export function setSiteAdmin(v: boolean): void {
-  if (v === siteAdmin) return;
-  siteAdmin = v;
-  adminListeners.forEach((f) => f(v));
+export function setSiteChrome(c: SiteChrome): void {
+  if (c.admin === siteChrome.admin && c.avatar === siteChrome.avatar && c.initials === siteChrome.initials) return;
+  siteChrome = c;
+  chromeListeners.forEach((f) => f(c));
 }
 
-export function getSiteAdmin(): boolean {
-  return siteAdmin;
+export function getSiteChrome(): SiteChrome {
+  return siteChrome;
 }
 
-export function subscribeSiteAdmin(f: (v: boolean) => void): () => void {
-  adminListeners.add(f);
-  return () => { adminListeners.delete(f); };
+export function subscribeSiteChrome(f: (c: SiteChrome) => void): () => void {
+  chromeListeners.add(f);
+  return () => { chromeListeners.delete(f); };
 }

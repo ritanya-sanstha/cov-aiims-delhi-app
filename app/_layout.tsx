@@ -14,7 +14,8 @@ import { useEffect, useState } from 'react';
 import { Stack, useRouter, useSegments, useRootNavigationState } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { View, ActivityIndicator } from 'react-native';
-import { REGISTER, siteUrl } from '../src/config';
+import { REGISTER } from '../src/config';
+import { isLoggedIn } from '../src/auth';
 
 type AuthState = 'loading' | 'loggedIn' | 'loggedOut';
 
@@ -44,27 +45,7 @@ export default function RootLayout() {
   async function checkAuthState() {
     // Don't let a slow server hold the launch screen: after 5s give up and
     // show the login WebView, which handles everything itself.
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 5000);
-    try {
-      // Ping a member-only page — the server redirects to /login if not authed
-      const res = await fetch(siteUrl(REGISTER.website.authCheckPath), {
-        method: 'GET',
-        redirect: 'follow',
-        credentials: 'include',
-        headers: { 'Accept': 'text/html' },
-        signal: controller.signal,
-      });
-      const finalUrl = res.url ?? '';
-      const isLogin = finalUrl.includes(REGISTER.website.loginPath);
-      // A 404/5xx (e.g. page not deployed) must not count as "logged in".
-      setAuthState(res.ok && !isLogin ? 'loggedIn' : 'loggedOut');
-    } catch {
-      // Network error or timeout → let the login WebView handle it
-      setAuthState('loggedOut');
-    } finally {
-      clearTimeout(timer);
-    }
+    setAuthState((await isLoggedIn(5000)) ? 'loggedIn' : 'loggedOut');
   }
 
   if (authState === 'loading') {
