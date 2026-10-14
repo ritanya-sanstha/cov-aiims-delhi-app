@@ -15,9 +15,10 @@ import { getSiteChrome, subscribeSiteChrome } from '../session';
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 
 export const APP_BG = '#F2F3F7';
-const LOGO = require('../../assets/logos/aiims-delhi-logo.png');
+// assets/brand/logo.png is the register's logo (scripts/apply-branding.js copies it there)
+const LOGO = require('../../assets/brand/logo.png');
 
-export default function AppBar({ title, onBack }: { title: string; onBack?: () => void }) {
+export default function AppBar({ title, subtitle, onBack }: { title: string; subtitle?: string; onBack?: () => void }) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { primaryColor } = REGISTER.branding;
@@ -47,7 +48,10 @@ export default function AppBar({ title, onBack }: { title: string; onBack?: () =
         ) : (
           <Image source={LOGO} style={styles.logo} />
         )}
-        <Text style={[styles.title, { color: primaryColor }]} numberOfLines={1}>{title}</Text>
+        <View style={styles.titles}>
+          <Text style={[styles.title, { color: primaryColor }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{title}</Text>
+          {!!subtitle && <Text style={styles.subtitle} numberOfLines={1}>{subtitle}</Text>}
+        </View>
         {!onBack && admin && <Action icon="shield-checkmark-outline" label="Admin panel" path="/admin" />}
         {!onBack && <Action icon="notifications-outline" label="Alerts" path="/notifications" />}
         {!onBack && (
@@ -88,7 +92,9 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 3 },
   },
   logo: { width: 36, height: 36, borderRadius: 18, marginRight: 4 },
-  title: { flex: 1, fontSize: 18, fontWeight: '800', letterSpacing: -0.2 },
+  titles: { flex: 1 },
+  title: { fontSize: 18, fontWeight: '800', letterSpacing: -0.2 },
+  subtitle: { fontSize: 11, color: '#6B7280', marginTop: 1 },
   action: { padding: 6 },
   back: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', marginRight: 4, backgroundColor: '#F2F3F7' },
   avatar: { width: 32, height: 32, borderRadius: 16, borderWidth: 1, borderColor: '#D1D5DB' },

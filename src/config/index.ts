@@ -83,6 +83,8 @@ export interface InstituteRegister {
     tagline2: string;
     memberIdPrefix: string;
     memberIdInstCode: string;
+    /** Shown under the institute name in the app, e.g. "Community of Volunteers" (common to all COV apps) */
+    programName?: string;
     poweredBy: string;
   };
 }
@@ -104,7 +106,7 @@ export const REGISTER: InstituteRegister =
       ],
       more: [],
     },
-    standard: { ritanyaTreeLogo: true, tagline1: 'One Family — Every Stage of Life', tagline2: 'Help Others Celebrate Life', memberIdPrefix: 'AB', memberIdInstCode: 'AD', poweredBy: 'Ritanya Sanstha' },
+    standard: { ritanyaTreeLogo: true, tagline1: 'One Family — Every Stage of Life', tagline2: 'Help Others Celebrate Life', memberIdPrefix: 'AB', memberIdInstCode: 'AD', programName: 'Community of Volunteers', poweredBy: 'Ritanya Sanstha' },
   };
 
 /** Website path for a tab, from the register (never hardcode paths in screens) */

@@ -38,7 +38,8 @@ export default function MoreScreen() {
     <AppBar title="More" />
     <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
       <View style={styles.header}>
-        <Text style={[styles.title, { color: branding.primaryColor }]}>{institute.name}</Text>
+        <Text style={[styles.title, { color: branding.primaryColor }]}>{institute.shortName}</Text>
+        {!!standard.programName && <Text style={styles.headerText}>{standard.programName}</Text>}
         {!!institute.tagline && <Text style={styles.headerText}>{institute.tagline}</Text>}
         {!!institute.description && <Text style={styles.headerSub}>{institute.description}</Text>}
       </View>

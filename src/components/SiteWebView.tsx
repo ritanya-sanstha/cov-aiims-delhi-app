@@ -48,11 +48,13 @@ interface Props {
   path: string;        // e.g. '/', '/gethelp'
   /** Screen title for the app's own top bar (shown when website.nativeHeader is on) */
   title?: string;
+  /** Small line under the title in the top bar */
+  subtitle?: string;
   /** Optional: scroll-up when tab is tapped again (default true) */
   scrollToTopOnFocus?: boolean;
 }
 
-export default function SiteWebView({ path, title }: Props) {
+export default function SiteWebView({ path, title, subtitle }: Props) {
   const router = useRouter();
   const [focused, setFocused] = useState(false);
   const loadedAt = useRef(0);
@@ -144,7 +146,7 @@ export default function SiteWebView({ path, title }: Props) {
   return (
     <View style={[styles.container, { paddingTop: nativeBar ? 0 : insets.top, backgroundColor: nativeBar ? APP_BG : primary }]}>
       {nativeBar && focused && <StatusBar style="dark" />}
-      {nativeBar && <AppBar title={title!} />}
+      {nativeBar && <AppBar title={title!} subtitle={subtitle} />}
       {initialLoading && (
         <View style={[styles.loader, { backgroundColor: primary }]}>
           <ActivityIndicator size="large" color={accent} />
