@@ -24,7 +24,7 @@ export default function AppBar({ title, subtitle, onBack }: { title: string; sub
   const insets = useSafeAreaInsets();
   const [chrome, setChrome] = useState(getSiteChrome());
   useEffect(() => subscribeSiteChrome(setChrome), []);
-  const { admin, avatar, initials } = chrome;
+  const { admin, avatar, initials, unread } = chrome;
 
   const open = (path: string, label: string) =>
     router.push({ pathname: '/page', params: { path, title: label } });
@@ -55,7 +55,16 @@ export default function AppBar({ title, subtitle, onBack }: { title: string; sub
           {!!subtitle && <Text style={styles.subtitle} numberOfLines={1}>{subtitle}</Text>}
         </View>
         {!onBack && admin && <Action icon="shield-checkmark-outline" label="Admin panel" path="/admin" />}
-        {!onBack && <Action icon="notifications-outline" label="Alerts" path="/notifications" />}
+        {!onBack && (
+          <View>
+            <Action icon="notifications-outline" label={unread > 0 ? `Alerts, ${unread} unread` : 'Alerts'} path="/notifications" />
+            {unread > 0 && (
+              <View pointerEvents="none" style={styles.badge}>
+                <Text style={styles.badgeText}>{unread > 99 ? '99+' : unread}</Text>
+              </View>
+            )}
+          </View>
+        )}
         {!onBack && (
           <TouchableOpacity
             onPress={() => open(REGISTER.website.profilePath, 'Profile')}
@@ -95,6 +104,8 @@ const styles = StyleSheet.create({
   title: { fontFamily: fonts.title, fontSize: 18, letterSpacing: -0.2, color: colors.primary },
   subtitle: { fontFamily: fonts.regular, fontSize: 11, color: colors.textMuted, marginTop: 1 },
   action: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  badge: { position: 'absolute', top: 5, right: 5, minWidth: 16, height: 16, borderRadius: 8, paddingHorizontal: 4, backgroundColor: colors.alert, alignItems: 'center', justifyContent: 'center' },
+  badgeText: { fontFamily: fonts.bold, color: '#FFFFFF', fontSize: 10 },
   avatar: { width: 36, height: 36, borderRadius: 18 },
   initials: { backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' },
   initialsText: { fontFamily: fonts.bold, color: '#FFFFFF', fontSize: 13 },

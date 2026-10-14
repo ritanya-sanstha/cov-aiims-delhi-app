@@ -81,4 +81,5 @@ Design system and every screen: `docs/DESIGN.md` (Claude Design canvas linked th
 ## Open items
 - Website: publish `assetlinks.json`; fix `/api/upload` (HTTP 500 "Failed to upload file", owner is on it);
   serve an app layout when the `COVApp` user agent is present.
-- Decide: remove the green share bubble? Native screens plan; Play Store signing.
+- Decided: share bubble hidden in the app + invite tile in More; app Home = member dashboard rendered by the website (not built yet).
+- Native screens plan; Play Store signing.

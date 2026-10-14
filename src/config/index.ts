@@ -58,6 +58,8 @@ export interface InstituteRegister {
     headerTitleFontPx?: number;
     /** Hide the website's page footer inside the app (its links are in More) */
     hideSiteFooter?: boolean;
+    /** Hide the website's floating "Invite friends" button (the app has its own invite in More) */
+    hideShareBubble?: boolean;
     /** Replace the website's floating header with the app's own top bar */
     nativeHeader?: boolean;
     /** Website paths (prefixes) where the website's own header is kept, e.g. admin */
@@ -102,7 +104,7 @@ export const REGISTER: InstituteRegister =
     // Fallback for bare metro / local dev without REGISTER_FILE set
     institute: { name: 'COV – AIIMS Delhi', shortName: 'AIIMS Delhi', code: 'AD', tagline: 'Alumni Network', description: '' },
     app: { appName: 'AIIMS Delhi Alumni', bundleId: 'in.ritanyasanstha.aiimsdelhi', androidPackage: 'in.ritanyasanstha.aiimsdelhi', versionCode: 1, easProfileName: 'aiims-delhi' },
-    website: { baseUrl: 'https://aiimsdelhi.ritanyasanstha.in', loginPath: '/login', homePath: '/', authCheckPath: '/profile', profilePath: '/profile', signOutButtonText: 'Sign Out', hideSiteBottomNavMarkers: ['mentors', 'jobs'], contactEmail: 'contact@ritanyasanstha.org', headerTitleFontPx: 14, hideSiteFooter: true, nativeHeader: true, keepSiteHeaderPaths: ['/admin'], appUserAgentToken: 'COVApp', allowedDomains: ['aiimsdelhi.ritanyasanstha.in', 'ritanyasanstha.in'] },
+    website: { baseUrl: 'https://aiimsdelhi.ritanyasanstha.in', loginPath: '/login', homePath: '/', authCheckPath: '/profile', profilePath: '/profile', signOutButtonText: 'Sign Out', hideSiteBottomNavMarkers: ['mentors', 'jobs'], contactEmail: 'contact@ritanyasanstha.org', headerTitleFontPx: 14, hideSiteFooter: true, hideShareBubble: true, nativeHeader: true, keepSiteHeaderPaths: ['/admin'], appUserAgentToken: 'COVApp', allowedDomains: ['aiimsdelhi.ritanyasanstha.in', 'ritanyasanstha.in'] },
     branding: { logoFile: 'aiims-delhi-logo.png', primaryColor: '#2E4D23', accentColor: '#F9BF1F', secondaryColor: '#2E7BA3', alertColor: '#B54321', statusBarStyle: 'light', splashBg: '#2E4D23', helplineColor: '#EF4444' },
     navigation: {
       tabs: [

@@ -27,6 +27,7 @@
     "contactEmail": "contact@ritanyasanstha.org",
     "headerTitleFontPx": 14,
     "hideSiteFooter": true,
+    "hideShareBubble": true,
     "nativeHeader": true,
     "keepSiteHeaderPaths": [
       "/admin"

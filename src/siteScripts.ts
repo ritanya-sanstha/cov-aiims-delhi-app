@@ -35,6 +35,7 @@ export function siteInjectedScript(): string {
   const fontPx = REGISTER.website.headerTitleFontPx ?? 14;
   const hideFooter = REGISTER.website.hideSiteFooter ?? false;
   const nativeHeader = REGISTER.website.nativeHeader ?? false;
+  const hideShare = REGISTER.website.hideShareBubble ?? false;
   const keepPaths = REGISTER.website.keepSiteHeaderPaths ?? [];
   return `
 (function () {
@@ -45,6 +46,7 @@ export function siteInjectedScript(): string {
   var fontPx = ${JSON.stringify(fontPx)};
   var hideFooter = ${JSON.stringify(hideFooter)};
   var nativeHeader = ${JSON.stringify(nativeHeader)};
+  var hideShare = ${JSON.stringify(hideShare)};
   var keepPaths = ${JSON.stringify(keepPaths)};
 
   // --- tell the page it is inside the app ---
@@ -226,10 +228,34 @@ export function siteInjectedScript(): string {
     var avatar = img ? avatarData(img) : '';
     var initials = a && !img ? (a.textContent || '').replace(/\\s+/g, '').slice(0, 2) : '';
     var admin = !!hdr.querySelector('a[href*="/admin"]');
-    var sig = admin + '|' + initials + '|' + avatar.length + avatar.slice(-24);
+    var unread = 0;
+    var bells = document.querySelectorAll('a[href$="/notifications"] span');
+    for (var b = 0; b < bells.length; b++) {
+      var m = /^(\\d+)\\+?$/.exec((bells[b].textContent || '').trim());
+      if (m) { unread = parseInt(m[1], 10); break; }
+    }
+    var sig = admin + '|' + initials + '|' + unread + '|' + avatar.length + avatar.slice(-24);
     if (sig === chromeSig) return;
     chromeSig = sig;
-    post({ kind: 'chrome', admin: admin, avatar: avatar, initials: initials, signedIn: !!a });
+    post({ kind: 'chrome', admin: admin, avatar: avatar, initials: initials, unread: unread, signedIn: !!a });
+  }
+  // The website's floating "Invite friends" button (fixed, small, round, share icon). The app offers sharing
+  // from More (phone share sheet) instead, so hide it where it covers page text.
+  function hideShareBubble() {
+    if (!hideShare) return;
+    var els = document.querySelectorAll('button.fixed, a.fixed, button[class*="fixed"]');
+    for (var i = 0; i < els.length; i++) {
+      var el = els[i];
+      if (el.__shareHidden) continue;
+      if (getComputedStyle(el).position !== 'fixed') continue;
+      var r = el.getBoundingClientRect();
+      if (r.width === 0 || r.width > 220 || r.height > 80 || r.top < window.innerHeight / 2) continue;
+      var label = ((el.getAttribute('aria-label') || '') + ' ' + (el.textContent || '')).toLowerCase();
+      if (el.querySelector('.lucide-share-2, .lucide-share') || /invite|share/.test(label)) {
+        el.style.setProperty('display', 'none', 'important');
+        el.__shareHidden = true;
+      }
+    }
   }
   function nativeHeaderRun() {
     if (!nativeHeader) return;
@@ -314,7 +340,7 @@ export function siteInjectedScript(): string {
     }
   }
 
-  function run() { markApp(); hideBottomBar(); nativeHeaderRun(); compactHeaderTitle(); appFeel(); }
+  function run() { markApp(); hideBottomBar(); hideShareBubble(); nativeHeaderRun(); compactHeaderTitle(); appFeel(); }
   run();
   var timer = null;
   new MutationObserver(function () {
@@ -342,9 +368,9 @@ function uploadReason(status: number): string {
 
 /** onMessage handler for site WebViews: shows why an upload failed. */
 export function handleSiteMessage(data: string): void {
-  let msg: { kind?: string; status?: number; path?: string; detail?: string; admin?: boolean; avatar?: string; initials?: string; signedIn?: boolean };
+  let msg: { kind?: string; status?: number; path?: string; detail?: string; admin?: boolean; avatar?: string; initials?: string; unread?: number; signedIn?: boolean };
   try { msg = JSON.parse(data); } catch { return; }
-  if (msg.kind === 'chrome') { setSiteChrome({ admin: !!msg.admin, avatar: msg.avatar || '', initials: msg.initials || '' }); return; }
+  if (msg.kind === 'chrome') { setSiteChrome({ admin: !!msg.admin, avatar: msg.avatar || '', initials: msg.initials || '', unread: msg.unread || 0 }); return; }
   if (msg.kind !== 'upload-error') return;
   const now = Date.now();
   if (now - lastUploadAlert < 5000) return;

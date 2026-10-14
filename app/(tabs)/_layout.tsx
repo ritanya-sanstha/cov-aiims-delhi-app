@@ -12,11 +12,13 @@
  *   jobs      → /jobs
  *   more      → /more
  */
+import { useEffect } from 'react';
 import { Tabs } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { REGISTER } from '../../src/config';
 import { colors, fonts, shadow } from '../../src/theme';
+import { loadMe } from '../../src/api';
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -35,6 +37,8 @@ const inactive = colors.textFaint;
 
 export default function TabsLayout() {
   const insets = useSafeAreaInsets();
+  // Who is signed in (photo, alerts count, invite code), if the website has the endpoint.
+  useEffect(() => { loadMe(); }, []);
   return (
     <Tabs
       screenOptions={{

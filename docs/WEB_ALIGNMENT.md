@@ -58,8 +58,11 @@ Add one class each, no behaviour change:
 - `components/Navbar.tsx`: the `motion.nav` gets `site-header`; the mobile bottom nav `motion.div` gets `site-bottom-nav`;
   the More overlay gets `site-bottom-nav` too (it is opened from the bottom nav).
 - `components/Footer.tsx` root element: `site-footer`.
-- The green share bubble component (find with `grep -rn "Share2\|share" components`): `site-fab`. Decision pending from the owner
-  whether it should exist in the app at all.
+- `components/ShareFab.tsx` (the green "Invite friends" bubble, `fixed bottom-24 left-6`): add `site-fab` to its button. **Decided: hidden in the
+  app**; the app has an "Invite a batchmate" tile in More that opens the phone's share sheet. The bubble shares
+  `${origin}/register?code=${user.referralCode}` with the text "Hey! Join COV – AIIMS Delhi, the community of AIIMS Delhi alumni. Use my link to register: <link>".
+  Two shell fixes while there: the text hard-codes "COV – AIIMS Delhi" (use `SITE.name` and `SITE.instituteFull`, otherwise every institute's
+  invitations name AIIMS Delhi), and `if (!typeof navigator) return;` is always false (it should be `typeof navigator === "undefined"`).
 
 Then in `app/globals.css`:
 ```css
@@ -98,6 +101,16 @@ Admin pages (`app/admin/**`) keep their own layout and header; do not hide anyth
   `isApp ? <AppHome/> : <Hero ... />`. Keep the marketing home for browsers.
 - `/login` in app mode: centered logo card as in the Login board, no navbar (hidden by 2.2), same fields and logic.
 - Keep these routes unchanged for browsers.
+- **Decided: the member dashboard is the app's Home** (owner's decision). Spec for `AppHome` (design: Home board in the canvas):
+  1. Greeting "Good evening, <first name>" (use the time of day on the client).
+  2. "Next learning session" card: the same `nextSession` data the marketing home loads; date badge in the highlight colour,
+     "Join session" and "Details" buttons. Hide the card if there is no session.
+  3. Quick actions grid (2 columns): Helpline, Directory, Jobs, Mentors. Respect the same feature switches the Navbar reads
+     (`/api/admin/control-panel` flags, e.g. `FEATURE_KEYS.JOBS`): an institute with Jobs switched off must not show the tile.
+  4. Alerts row: "N new alerts" linking to `/notifications` when unread is above zero.
+  5. Announcements: the existing `AnnouncementTicker` content as a short list.
+  6. An "Invite a batchmate" card is optional (the app has it in More).
+  All of it is server-rendered by the website; the app just shows the page. No new API is needed for this.
 
 ### 2.5 What else to hide or keep in app mode
 Hide: floating header, bottom nav, More overlay, footer, share bubble. Keep: toasts (`Toaster`), the unverified overlay,
@@ -128,7 +141,7 @@ import { getCurrentUserFields } from "@/lib/auth/user";
 export async function GET() {
   const s = await getSessionUser();
   if (!s) return NextResponse.json({ signedIn: false }, { status: 401 });
-  const f = await getCurrentUserFields(["name", "profileImage", "role", "status"]);
+  const f = await getCurrentUserFields(["name", "profileImage", "role", "status", "referralCode"]);
   const name = f?.name ?? "";
   return NextResponse.json({
     signedIn: true,
@@ -137,10 +150,15 @@ export async function GET() {
     profileImage: f?.profileImage ?? "",       // the same URL UserAvatar uses (adapt: it may go through /api/image-proxy)
     isAdmin: ["Admin", "Super Admin", "Core Volunteer"].includes(String(f?.role)),
     unread: 0,                                  // adapt: call the same query getUnreadCountAction uses
+    referralCode: f?.referralCode ?? "",         // the app builds the invite link `${origin}/register?code=<code>` from it
   }, { headers: { "Cache-Control": "private, no-store" } });
 }
 ```
 Admin roles are taken from `components/Navbar.tsx`; re-check them against `models/user.ts`.
+
+The app already calls this endpoint (`src/api.ts` `loadMe()`, once when the tabs open) and uses `initials`, `profileImage`,
+`isAdmin`, `unread` (bell badge) and `referralCode` (invite link). Until the endpoint exists on a site the call fails quietly and the app
+reads the same facts from the page header. So deploying it needs no app release.
 
 ### 4.2 Session probe
 The app currently fetches `/profile` to learn if the member is signed in. `GET /api/app/v1/me` replaces it

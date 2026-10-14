@@ -39,6 +39,12 @@ Target Home is a member dashboard (next session, quick actions, alerts); today i
 - Floating top card (`AppBar`), floating tab bar, More screen as tile grid + list card, sign-out and login on the light ground,
   offline screen as designed. The More menu no longer lists Profile and Alerts (bell and avatar open them).
 
+## Decisions (owner)
+- The website's floating "Invite friends" bubble is hidden in the app; More has an "Invite a batchmate" tile that opens the phone's
+  share sheet with the member's referral link (`/register?code=<referralCode>`, plain `/register` until the code is known).
+- The app's Home is the member dashboard (rendered by the website in app mode, spec in WEB_ALIGNMENT.md 2.4), not the marketing page.
+- Bell badge shows the unread count (from `/api/app/v1/me` or read from the page).
+
 ## Gaps between this design and the current app (punch list)
 1. Website pages in app mode: ground #F2F3F7 behind white cards, no hero/footer; needs the website to serve
    an app layout for the `COVApp` user agent (see WEBSITE_APP_MODE.md). The pages still use the website's own fonts and layout.

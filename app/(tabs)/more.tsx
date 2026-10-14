@@ -3,7 +3,7 @@
  * Everything shown comes from the register; look: docs/DESIGN.md.
  */
 import { useCallback, useState } from 'react';
-import { Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Linking, ScrollView, Share, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
@@ -11,6 +11,8 @@ import Constants from 'expo-constants';
 import { REGISTER } from '../../src/config';
 import AppBar, { APP_BG } from '../../src/components/AppBar';
 import { colors, fonts, shadow } from '../../src/theme';
+import { getSiteChrome } from '../../src/session';
+import { inviteLink } from '../../src/api';
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -42,6 +44,13 @@ export default function MoreScreen() {
   const version = Constants.expoConfig?.version ?? '';
   const openPage = (path: string, title: string) => () => router.push({ pathname: '/page', params: { path, title } });
 
+  // Phone share sheet with the member's own invite link (replaces the website's floating button).
+  const invite = () => {
+    const link = inviteLink(getSiteChrome().referralCode);
+    const message = `Hey! Join ${institute.name}, the community of ${institute.shortName} alumni. Use my link to register: ${link}`;
+    Share.share({ message }).catch(() => {});
+  };
+
   const tiles = navigation.more.filter((m) => m.group !== 'list');
   const listed = navigation.more.filter((m) => m.group === 'list');
 
@@ -60,6 +69,7 @@ export default function MoreScreen() {
           {tiles.map((item) => (
             <Tile key={item.path} icon={item.icon} label={item.label} onPress={openPage(item.path, item.label)} />
           ))}
+          <Tile icon="share-social-outline" label="Invite a batchmate" onPress={invite} />
         </View>
 
         <View style={styles.card}>
