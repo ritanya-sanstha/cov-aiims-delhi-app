@@ -128,9 +128,9 @@ export function siteInjectedScript(): string {
     }
     return null;
   }
-  // Page-top (px) of the first visible content that is not part of a fixed/sticky bar.
+  // First visible content that is not part of a fixed/sticky bar: { top: page-top px, el }.
   function firstContentTop() {
-    var fixedList = [], best = Infinity;
+    var fixedList = [], best = Infinity, bestEl = null;
     var all = document.body ? document.body.querySelectorAll('*') : [];
     for (var i = 0; i < all.length; i++) {
       var el = all[i], tag = el.tagName;
@@ -146,23 +146,47 @@ export function siteInjectedScript(): string {
       var r = el.getBoundingClientRect();
       if (r.width === 0 || r.height === 0) continue;
       var top = r.top + window.pageYOffset;
-      if (top < best) best = top;
+      if (top < best) { best = top; bestEl = el; }
     }
-    return best;
+    return { top: best, el: bestEl };
   }
-  // The hidden header leaves its reserved space empty: pull the page up (a few
-  // tries per page, content renders after load).
+  // The hidden header leaves its reserved space empty at the top of the page. Close the gap
+  // by reducing the top padding/margin of the first content's ancestors (never below zero, so
+  // nothing can end up above the start of the page and become unreachable). A few tries per
+  // page, because content renders after load.
+  var trimmed = [];
+  function undoTrim() {
+    for (var i = 0; i < trimmed.length; i++) {
+      var t = trimmed[i];
+      if (t.prev) t.el.style.setProperty(t.prop, t.prev, t.prio); else t.el.style.removeProperty(t.prop);
+    }
+    trimmed = [];
+  }
   function trimTop() {
     var path = location.pathname;
-    if (trimPath !== path) { trimPath = path; trims = 0; }
+    if (trimPath !== path) { undoTrim(); trimPath = path; trims = 0; }
     var now = Date.now();
-    if (trims >= 4 || now - lastTrim < 500 || !document.body) return;
+    if (trims >= 6 || now - lastTrim < 700 || !document.body) return;
     trims++; lastTrim = now;
-    var b = document.body.style;
-    b.setProperty('margin-top', '0px', 'important');
-    var top = firstContentTop();
-    var shift = top - 12;
-    if (isFinite(top) && shift > 0) b.setProperty('margin-top', (-shift) + 'px', 'important');
+    undoTrim();
+    var f = firstContentTop();
+    var left = f.top - 12;
+    if (!f.el || !isFinite(f.top) || left <= 0) return;
+    var chain = [];
+    for (var n = f.el; n && n !== document.documentElement; n = n.parentElement) chain.unshift(n);
+    for (var k = 0; k < chain.length && left > 0; k++) {
+      var cs = getComputedStyle(chain[k]);
+      var props = ['padding-top', 'margin-top'];
+      for (var q = 0; q < props.length && left > 0; q++) {
+        var v = parseFloat(cs.getPropertyValue(props[q])) || 0;
+        if (v <= 0) continue;
+        var cut = Math.min(v, left);
+        var st = chain[k].style;
+        trimmed.push({ el: chain[k], prop: props[q], prev: st.getPropertyValue(props[q]), prio: st.getPropertyPriority(props[q]) });
+        st.setProperty(props[q], (v - cut) + 'px', 'important');
+        left -= cut;
+      }
+    }
   }
   // Tell the app who is signed in (admin link, profile photo / initials) from the header it hides.
   function avatarData(img) {
@@ -191,7 +215,7 @@ export function siteInjectedScript(): string {
     if (!nativeHeader) return;
     if (headerKept()) {
       if (hdr) { hdr.style.removeProperty('display'); hdr = null; chromeSig = ''; }
-      if (document.body) document.body.style.removeProperty('margin-top');
+      undoTrim();
       trimPath = null;
       return;
     }
