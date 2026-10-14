@@ -17,7 +17,7 @@ the token sheet, a three-institute theme comparison and an inventory of every ap
 | Alert (new) | `branding.alertColor` | #B54321 (website `--brand-accent`) |
 
 Rule: copy each institute's palette from its website stylesheet (`app/globals.css` in `cov-<inst>`), so the app
-bars match the page under them. Today the AIIMS register still has navy #1B2B5E and gold #C9A84C: change it.
+bars match the page under them. (The AIIMS register was navy #1B2B5E and gold #C9A84C before this was applied.)
 
 ## Fixed for every institute
 - Fonts: Plus Jakarta Sans (titles) and Geist (text), the same as the website.
