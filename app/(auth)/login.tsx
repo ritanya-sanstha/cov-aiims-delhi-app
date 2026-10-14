@@ -17,6 +17,7 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import WebView, { WebViewNavigation } from 'react-native-webview';
 import { appUserAgent } from '../../src/siteScripts';
+import { isLoggedIn } from '../../src/auth';
 import { REGISTER, siteUrl, isAllowedUrl } from '../../src/config';
 import { setLandingUrl } from '../../src/session';
 
@@ -33,18 +34,36 @@ export default function LoginScreen() {
   const primary = REGISTER.branding.primaryColor;
   const accent = REGISTER.branding.accentColor;
 
+  // The page can leave /login without a login (logo, Register, Forgot password...), so
+  // moving to another URL proves nothing: confirm with the website that we are signed in.
+  const checking = useRef(false);
+  const done = useRef(false);
+
+  async function confirmLogin(url: string) {
+    if (checking.current || done.current) return;
+    checking.current = true;
+    try {
+      // the cookie can take a moment to be readable right after the redirect
+      for (let attempt = 0; attempt < 3; attempt++) {
+        if (await isLoggedIn(4000)) {
+          done.current = true;
+          // Remember where the website sent us: the Home tab shows this page
+          setLandingUrl(url);
+          router.replace('/(tabs)/home');
+          return;
+        }
+        await new Promise((r) => setTimeout(r, 700));
+      }
+    } finally {
+      checking.current = false;
+    }
+  }
+
   function handleNavigationStateChange(navState: WebViewNavigation) {
     const { url } = navState;
     if (!url) return;
-
-    // Successful login: website redirects away from /login
     const isOnLoginPage = url.includes(REGISTER.website.loginPath);
-    if (!isOnLoginPage && isAllowedUrl(url)) {
-      // Remember where the website sent us: the Home tab shows this page
-      setLandingUrl(url);
-      // Small delay to let the cookie settle
-      setTimeout(() => router.replace('/(tabs)/home'), 100);
-    }
+    if (!isOnLoginPage && isAllowedUrl(url)) confirmLogin(url);
   }
 
   function handleShouldStartLoadWithRequest(request: { url: string }) {
